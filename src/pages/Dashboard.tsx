@@ -107,6 +107,8 @@ const Dashboard: React.FC = () => {
       });
     }
   };
+
+  
   
   return (
     <motion.div 
@@ -304,10 +306,9 @@ const Dashboard: React.FC = () => {
       
       <div className="glass-card rounded-lg p-6 text-center">
         <h3 className="text-xl font-medium mb-3">Daily Inspiration</h3>
-        <blockquote className="text-lg italic mb-4">
-          "The secret of change is to focus all of your energy, not on fighting the old, but on building the new."
+        <blockquote className="text-lg italic mb-4"> "-- QUOTE HERE --"
         </blockquote>
-        <p className="text-muted-foreground">Socrates</p>
+        <p className="text-muted-foreground">Scripture Quote</p>
       </div>
     </motion.div>
   );

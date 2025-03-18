@@ -29,6 +29,16 @@ const Register: React.FC = () => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;  // Simple email regex
+      return emailRegex.test(email);
+    }
+    
+    if (!isValidEmail(email)) {
+        setError("Please enter a valid email address.");
+        return;
+    }
     
     // Form validation
     if (password !== confirmPassword) {
@@ -75,7 +85,7 @@ const Register: React.FC = () => {
       if (success) {
         navigate('/dashboard');
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Failed to create account');
     } finally {
       setIsLoading(false);

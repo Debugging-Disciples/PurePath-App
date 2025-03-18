@@ -17,13 +17,13 @@ export interface UserProfile {
 
 // Firebase configuration with provided credentials
 const firebaseConfig = {
-  apiKey: "AIzaSyBSUhzRzywLJBBJLECv8bIpmEKKM--uaJ8",
-  authDomain: "purepath-cd3bd.firebaseapp.com",
-  projectId: "purepath-cd3bd",
-  storageBucket: "purepath-cd3bd.appspot.com", // Fixed storage bucket URL
-  messagingSenderId: "642958711026",
-  appId: "1:642958711026:web:89f31bb19487fba76b986b",
-  measurementId: "G-MSC58HV9T2"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 console.log("Firebase config:", firebaseConfig);
@@ -60,7 +60,7 @@ export const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
     toast.success('Welcome back to PurePath');
     return true;
-  } catch (error: any) {
+  } catch (error) {
     toast.error('Login failed: ' + error.message);
     return false;
   }
@@ -83,7 +83,7 @@ export const register = async (email: string, password: string, username: string
     
     toast.success('Welcome to PurePath');
     return true;
-  } catch (error: any) {
+  } catch (error) {
     toast.error('Registration failed: ' + error.message);
     return false;
   }
@@ -94,7 +94,7 @@ export const logout = async () => {
     await signOut(auth);
     toast.success('You have been logged out');
     return true;
-  } catch (error: any) {
+  } catch (error) {
     toast.error('Logout failed: ' + error.message);
     return false;
   }
@@ -179,7 +179,7 @@ export const updateStreak = async (userId: string) => {
     }
     
     return { success: false, message: 'User not found' };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating streak:', error);
     return { success: false, message: error.message };
   }
@@ -202,7 +202,7 @@ export const logRelapse = async (userId: string, notes?: string) => {
     });
     
     return { success: true, message: 'Progress reset. Remember: every moment is a new opportunity.' };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error logging relapse:', error);
     return { success: false, message: error.message };
   }
