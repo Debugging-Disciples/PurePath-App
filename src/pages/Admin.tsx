@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { CustomBadge } from '@/components/ui/custom-badge';
 import { 
   Users, 
   Lock, 
@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Mock data
 const MOCK_USERS = [
   { id: '1', name: 'Sarah K.', email: 'sarah@example.com', role: 'member', status: 'active', streak: 45, joinDate: '2022-05-15' },
   { id: '2', name: 'Michael T.', email: 'michael@example.com', role: 'member', status: 'active', streak: 30, joinDate: '2022-06-22' },
@@ -38,7 +37,6 @@ const MOCK_FLAGGED_CONTENT = [
 const Admin: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Filter users based on search term
   const filteredUsers = MOCK_USERS.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -141,9 +139,9 @@ const Admin: React.FC = () => {
                             </Badge>
                           </td>
                           <td className="py-3 px-4">
-                            <Badge variant={user.status === 'active' ? 'success' : 'secondary'}>
+                            <CustomBadge variant={user.status === 'active' ? 'success' : 'secondary'}>
                               {user.status}
-                            </Badge>
+                            </CustomBadge>
                           </td>
                           <td className="py-3 px-4">{user.streak} days</td>
                           <td className="py-3 px-4">

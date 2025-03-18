@@ -1,11 +1,11 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User } from 'firebase/auth';
-import { auth, getUserProfile } from './firebase';
+import { auth, getUserProfile, UserProfile } from './firebase';
 
 interface AuthContextType {
   currentUser: User | null;
-  userProfile: any | null;
+  userProfile: UserProfile | null;
   userRole: 'admin' | 'member' | null;
   isAdmin: boolean;
   isLoading: boolean;
@@ -23,7 +23,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'member' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const profile = await getUserProfile(user.uid);
           setUserProfile(profile);
-          setUserRole(profile?.role as 'admin' | 'member' || 'member');
+          setUserRole(profile?.role || 'member');
         } catch (error) {
           console.error('Error fetching user profile:', error);
           setUserProfile(null);

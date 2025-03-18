@@ -4,6 +4,18 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
+// Define user profile interface
+export interface UserProfile {
+  id: string;
+  username?: string;
+  email?: string;
+  location?: GeoPoint;
+  role?: 'admin' | 'member';
+  joinedAt?: Timestamp;
+  streakDays?: number;
+  lastCheckIn?: Timestamp;
+}
+
 // Firebase configuration - users will need to add their own config
 const firebaseConfig = {
   apiKey: "",
@@ -66,13 +78,13 @@ export const logout = async () => {
 };
 
 // User data functions
-export const getUserProfile = async (userId: string) => {
+export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
     const docRef = doc(db, 'users', userId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      return { id: docSnap.id, ...docSnap.data() } as UserProfile;
     } else {
       return null;
     }
