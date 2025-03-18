@@ -9,6 +9,7 @@ interface AuthContextType {
   userRole: 'admin' | 'member' | null;
   isAdmin: boolean;
   isLoading: boolean;
+  firebaseInitialized: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -16,7 +17,8 @@ export const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   userRole: null,
   isAdmin: false,
-  isLoading: true
+  isLoading: true,
+  firebaseInitialized: false
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -26,13 +28,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'member' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [firebaseInitialized, setFirebaseInitialized] = useState(!!auth);
 
   useEffect(() => {
     // Check if Firebase is initialized
     if (!auth) {
       console.error("Firebase auth not initialized in AuthProvider");
       setIsLoading(false);
+      setFirebaseInitialized(false);
       return () => {};
+    } else {
+      setFirebaseInitialized(true);
     }
     
     console.log("Setting up auth state listener");
@@ -57,6 +63,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       setIsLoading(false);
+    }, (error) => {
+      console.error("Auth state listener error:", error);
+      setIsLoading(false);
     });
 
     return unsubscribe;
@@ -67,7 +76,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userProfile,
     userRole,
     isAdmin: userRole === 'admin',
-    isLoading
+    isLoading,
+    firebaseInitialized
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

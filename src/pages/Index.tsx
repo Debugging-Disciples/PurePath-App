@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
-import { ArrowRight, HeartPulse, Shield, Zap, Users, Map, Lock } from 'lucide-react';
+import { ArrowRight, HeartPulse, Shield, Zap, Users, Map, Lock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Index: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, firebaseInitialized } = useAuth();
   
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -53,6 +53,19 @@ const Index: React.FC = () => {
   
   return (
     <div className="min-h-screen">
+      {/* Firebase Initialization Error Alert */}
+      {!firebaseInitialized && (
+        <div className="px-6 py-4">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Firebase Initialization Error</AlertTitle>
+            <AlertDescription>
+              Firebase could not be initialized. Please check your configuration and console for errors.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+      
       {/* Hero Section */}
       <section className="relative py-20 md:py-32 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-secondary/50 to-transparent -z-10" />

@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp } from 'firebase/firestore';
@@ -21,7 +20,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBSUhzRzywLJBBJLECv8bIpmEKKM--uaJ8",
   authDomain: "purepath-cd3bd.firebaseapp.com",
   projectId: "purepath-cd3bd",
-  storageBucket: "purepath-cd3bd.firebasestorage.app",
+  storageBucket: "purepath-cd3bd.appspot.com", // Fixed storage bucket URL
   messagingSenderId: "642958711026",
   appId: "1:642958711026:web:89f31bb19487fba76b986b",
   measurementId: "G-MSC58HV9T2"
@@ -29,10 +28,25 @@ const firebaseConfig = {
 
 console.log("Firebase config:", firebaseConfig);
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Initialize Firebase with better error handling
+let app, auth, db;
+try {
+  console.log("Initializing Firebase app...");
+  app = initializeApp(firebaseConfig);
+  console.log("Firebase app initialized successfully");
+  
+  console.log("Initializing Firebase auth...");
+  auth = getAuth(app);
+  console.log("Firebase auth initialized successfully");
+  
+  console.log("Initializing Firestore...");
+  db = getFirestore(app);
+  console.log("Firestore initialized successfully");
+} catch (error) {
+  console.error("Error initializing Firebase:", error);
+}
+
+export { app, auth, db };
 
 // Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
