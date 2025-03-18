@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp } from 'firebase/firestore';
@@ -15,22 +16,23 @@ export interface UserProfile {
   lastCheckIn?: Timestamp;
 }
 
-// Firebase configuration - users will need to add their own config
+// Firebase configuration with provided credentials
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
+  apiKey: "AIzaSyBSUhzRzywLJBBJLECv8bIpmEKKM--uaJ8",
+  authDomain: "purepath-cd3bd.firebaseapp.com",
+  projectId: "purepath-cd3bd",
+  storageBucket: "purepath-cd3bd.firebasestorage.app",
+  messagingSenderId: "642958711026",
+  appId: "1:642958711026:web:89f31bb19487fba76b986b",
+  measurementId: "G-MSC58HV9T2"
 };
 
 console.log("Firebase config:", firebaseConfig);
 
-// Initialize Firebase - only initialize if we have at least some config
-const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
-export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app) : null;
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
 // Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
