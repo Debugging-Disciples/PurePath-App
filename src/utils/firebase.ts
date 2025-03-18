@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp } from 'firebase/firestore';
@@ -18,21 +17,29 @@ export interface UserProfile {
 
 // Firebase configuration - users will need to add their own config
 const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+console.log("Firebase config:", firebaseConfig);
 
-// Auth functions
+// Initialize Firebase - only initialize if we have at least some config
+const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
+
+// Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
+  if (!auth) {
+    console.error("Firebase auth not initialized");
+    toast.error('Firebase not configured. Please add your Firebase credentials in environment variables.');
+    return false;
+  }
+  
   try {
     await signInWithEmailAndPassword(auth, email, password);
     toast.success('Welcome back to PurePath');
@@ -79,6 +86,11 @@ export const logout = async () => {
 
 // User data functions
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  if (!db) {
+    console.error("Firebase db not initialized");
+    return { id: userId };
+  }
+  
   try {
     const docRef = doc(db, 'users', userId);
     const docSnap = await getDoc(docRef);
@@ -86,11 +98,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as UserProfile;
     } else {
-      return null;
+      return { id: userId };
     }
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    return null;
+    return { id: userId };
   }
 };
 

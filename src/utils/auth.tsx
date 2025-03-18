@@ -28,12 +28,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.error("Firebase auth not initialized in AuthProvider");
+      setIsLoading(false);
+      return () => {};
+    }
+    
+    console.log("Setting up auth state listener");
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      console.log("Auth state changed:", user ? "User logged in" : "No user");
       setCurrentUser(user);
       
       if (user) {
         try {
           const profile = await getUserProfile(user.uid);
+          console.log("User profile:", profile);
           setUserProfile(profile);
           setUserRole(profile?.role || 'member');
         } catch (error) {
