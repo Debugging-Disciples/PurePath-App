@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -14,6 +14,14 @@ export interface UserProfile {
   joinedAt?: Timestamp;
   streakDays?: number;
   lastCheckIn?: Timestamp;
+  socialMedia?: {
+    discord?: string;
+    instagram?: string;
+    other?: {
+      name: string;
+      url: string;
+    };
+  };
 }
 
 // Firebase configuration with provided credentials
@@ -126,13 +134,56 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
-export const checkUserRole = async (userId: string): Promise<'admin' | 'member' | null> => {
+export const updateUserProfile = async (userId: string, profileData: Partial<UserProfile>): Promise<boolean> => {
+  if (!db) {
+    console.error("Firebase db not initialized");
+    toast.error('Firebase not configured properly');
+    return false;
+  }
+  
   try {
-    const userProfile = await getUserProfile(userId);
-    return userProfile?.role as 'admin' | 'member' | null;
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, profileData);
+    toast.success('Profile updated successfully');
+    return true;
   } catch (error) {
-    console.error('Error checking user role:', error);
-    return null;
+    console.error('Error updating profile:', error);
+    toast.error('Failed to update profile: ' + error.message);
+    return false;
+  }
+};
+
+export const updateUserPassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+  if (!auth || !auth.currentUser) {
+    console.error("User not logged in or auth not initialized");
+    toast.error('You must be logged in to change your password');
+    return false;
+  }
+  
+  try {
+    // Re-authenticate user before changing password
+    const credential = EmailAuthProvider.credential(
+      auth.currentUser.email || '',
+      currentPassword
+    );
+    
+    await reauthenticateWithCredential(auth.currentUser, credential);
+    await updatePassword(auth.currentUser, newPassword);
+    toast.success('Password updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating password:', error);
+    
+    // Handle specific error codes
+    if (error.code === 'auth/wrong-password') {
+      toast.error('Current password is incorrect');
+    } else if (error.code === 'auth/weak-password') {
+      toast.error('New password is too weak');
+    } else {
+      toast.error('Failed to update password: ' + error.message);
+    }
+    
+    return false;
   }
 };
 
