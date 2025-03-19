@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,11 @@ const mockMoodData = [
   { date: 'Jan 14', streak: 5, mood: 9 }
 ];
 
+interface TriggerData {
+  name: string;
+  count: number;
+}
+
 const triggerOptions = [
   { value: 'stress', label: 'Stress' },
   { value: 'boredom', label: 'Boredom' },
@@ -62,7 +68,7 @@ const Analytics: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [triggerData, setTriggerData] = useState<{ name: string; count: number }[]>([]);
+  const [triggerData, setTriggerData] = useState<TriggerData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {

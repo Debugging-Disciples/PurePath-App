@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, limit } from 'firebase/firestore';
@@ -199,10 +200,13 @@ export const updateStreak = async (userId: string) => {
       const now = new Date();
       
       // Check if the last check-in was yesterday (maintaining streak)
+      const yesterdayDate = new Date(now);
+      yesterdayDate.setDate(now.getDate() - 1);
+      
       const isYesterday = 
-        lastCheckIn.getDate() === now.getDate() - 1 && 
-        lastCheckIn.getMonth() === now.getMonth() && 
-        lastCheckIn.getFullYear() === now.getFullYear();
+        lastCheckIn.getDate() === yesterdayDate.getDate() && 
+        lastCheckIn.getMonth() === yesterdayDate.getMonth() && 
+        lastCheckIn.getFullYear() === yesterdayDate.getFullYear();
         
       // Check if already checked in today
       const isToday = 
@@ -265,7 +269,7 @@ export const logRelapse = async (userId: string, triggers: string[], notes?: str
 };
 
 // Get user triggers from the last 7 days
-export const getUserTriggers = async (userId: string) => {
+export const getUserTriggers = async (userId: string): Promise<{ name: string; count: number; }[]> => {
   try {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -281,7 +285,7 @@ export const getUserTriggers = async (userId: string) => {
     const querySnapshot = await getDocs(q);
     
     // Count the triggers
-    const triggerCounts = {};
+    const triggerCounts: Record<string, number> = {};
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
