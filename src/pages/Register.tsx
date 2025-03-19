@@ -95,7 +95,7 @@ const Register: React.FC = () => {
       if (success) {
         navigate('/dashboard');
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Failed to create account');
     } finally {
       setIsLoading(false);

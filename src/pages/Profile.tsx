@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { updateUserProfile, updateUserPassword, UserProfile } from '../utils/firebase';
+import { updateUserProfile, updateUserPassword } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,8 +15,9 @@ import { toast } from 'sonner';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { AtSign, Key, User, Instagram, MessageSquare, Link as LinkIcon } from 'lucide-react';
+import SocialMediaLinks from '@/components/SocialMedia';
+const currentUser = useAuth; 
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -46,7 +46,7 @@ const passwordFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
-const ProfilePage: React.FC = () => {
+const Profile: React.FC = () => {
   const { currentUser, userProfile, isLoading } = useAuth();
   const navigate = useNavigate();
   const [updateLoading, setUpdateLoading] = useState(false);
@@ -202,7 +202,7 @@ const ProfilePage: React.FC = () => {
                 <User size={16} className="text-muted-foreground" />
                 <span>Member since {userProfile.joinedAt?.toDate().toLocaleDateString() || 'N/A'}</span>
               </div>
-              
+{/*               
               {userProfile.socialMedia?.discord && (
                 <div className="flex items-center gap-2">
                   <MessageSquare size={16} className="text-muted-foreground" />
@@ -222,7 +222,7 @@ const ProfilePage: React.FC = () => {
                   <LinkIcon size={16} className="text-muted-foreground" />
                   <span>{userProfile.socialMedia.other.name || 'Other'}: {userProfile.socialMedia.other.url}</span>
                 </div>
-              )}
+              )} */}
             </div>
           </CardContent>
         </Card>
@@ -277,8 +277,6 @@ const ProfilePage: React.FC = () => {
                               <SelectContent>
                                 <SelectItem value="male">Male</SelectItem>
                                 <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                                <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -287,76 +285,7 @@ const ProfilePage: React.FC = () => {
                       />
                       
                       <div className="space-y-4">
-                        <h3 className="font-medium">Social Media Links</h3>
-                        
-                        <FormField
-                          control={profileForm.control}
-                          name="socialMedia.discord"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Discord Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Your Discord username" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                Add your Discord username without the # and numbers
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={profileForm.control}
-                          name="socialMedia.instagram"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Instagram Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Your Instagram handle (without @)" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="grid gap-4">
-                          <FormField
-                            control={profileForm.control}
-                            name="socialMedia.other.name"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Other Platform Name</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Name of platform (e.g. Twitter, LinkedIn)" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={profileForm.control}
-                            name="socialMedia.other.url"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Other Platform URL</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    placeholder="https://example.com/your-profile" 
-                                    type="url"
-                                    {...field} 
-                                    value={field.value || ''}
-                                  />
-                                </FormControl>
-                                <FormDescription>
-                                  Full URL to your profile on this platform
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+                        <SocialMediaLinks userId={currentUser.uid} />
                       </div>
                       
                       <Button 
@@ -459,4 +388,4 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-export default ProfilePage;
+export default Profile;
