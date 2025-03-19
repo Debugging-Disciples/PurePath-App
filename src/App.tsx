@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { useAuth } from './utils/auth';
@@ -21,6 +20,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
 import ProfilePage from './pages/Profile';
+import Analytics from './pages/Analytics';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, isLoading } = useAuth();
@@ -147,6 +147,7 @@ const App: React.FC = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

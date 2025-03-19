@@ -1,19 +1,17 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import ProgressChart from '@/components/ProgressChart';
-import { logRelapse } from '../utils/firebase';
+import { logRelapse, getUserTriggers } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Trophy, CalendarDays, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { MultiSelect } from '@/components/ui/multi-select';
 
-// Mock data
 const mockStreakData = [
   { date: 'Jan 1', streak: 1 },
   { date: 'Jan 2', streak: 2 },
@@ -23,7 +21,7 @@ const mockStreakData = [
   { date: 'Jan 6', streak: 6 },
   { date: 'Jan 7', streak: 7 },
   { date: 'Jan 8', streak: 8 },
-  { date: 'Jan 9', streak: 0 }, // relapse
+  { date: 'Jan 9', streak: 0 },
   { date: 'Jan 10', streak: 1 },
   { date: 'Jan 11', streak: 2 },
   { date: 'Jan 12', streak: 3 },
@@ -40,7 +38,7 @@ const mockMoodData = [
   { date: 'Jan 6', streak: 6, mood: 9 },
   { date: 'Jan 7', streak: 7, mood: 8 },
   { date: 'Jan 8', streak: 8, mood: 8 },
-  { date: 'Jan 9', streak: 0, mood: 3 }, // relapse day
+  { date: 'Jan 9', streak: 0, mood: 3 },
   { date: 'Jan 10', streak: 1, mood: 4 },
   { date: 'Jan 11', streak: 2, mood: 6 },
   { date: 'Jan 12', streak: 3, mood: 7 },
@@ -48,29 +46,55 @@ const mockMoodData = [
   { date: 'Jan 14', streak: 5, mood: 9 }
 ];
 
-// Mock triggers
-const mockTriggers = [
-  { name: 'Stress', count: 12 },
-  { name: 'Boredom', count: 8 },
-  { name: 'Loneliness', count: 5 },
-  { name: 'Fatigue', count: 4 },
-  { name: 'Social Media', count: 7 }
+const triggerOptions = [
+  { value: 'stress', label: 'Stress' },
+  { value: 'boredom', label: 'Boredom' },
+  { value: 'loneliness', label: 'Loneliness' },
+  { value: 'fatigue', label: 'Fatigue' },
+  { value: 'social-media', label: 'Social Media' },
+  { value: 'peer-pressure', label: 'Peer Pressure' },
+  { value: 'emotional-distress', label: 'Emotional Distress' },
+  { value: 'other', label: 'Other' },
 ];
 
 const Analytics: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [notes, setNotes] = useState('');
-  const [selectedTrigger, setSelectedTrigger] = useState('');
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [triggerData, setTriggerData] = useState<{ name: string; count: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchTriggerData = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setIsLoading(true);
+        const triggers = await getUserTriggers(currentUser.uid);
+        setTriggerData(triggers);
+      } catch (error) {
+        console.error('Error fetching trigger data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchTriggerData();
+  }, [currentUser]);
   
   const handleRelapseSubmit = async () => {
     if (!currentUser) return;
+    if (selectedTriggers.length === 0) {
+      toast.error("Please select at least one trigger");
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
-      const relapseNotes = `Trigger: ${selectedTrigger}. Notes: ${notes}`;
-      const result = await logRelapse(currentUser.uid, relapseNotes);
+      const relapseNotes = notes.trim();
+      const result = await logRelapse(currentUser.uid, selectedTriggers, relapseNotes);
       
       if (result.success) {
         toast.success("Progress reset", {
@@ -78,7 +102,10 @@ const Analytics: React.FC = () => {
         });
         
         setNotes('');
-        setSelectedTrigger('');
+        setSelectedTriggers([]);
+        
+        const updatedTriggers = await getUserTriggers(currentUser.uid);
+        setTriggerData(updatedTriggers);
       } else {
         toast.error("Failed to log relapse", {
           description: result.message
@@ -94,15 +121,21 @@ const Analytics: React.FC = () => {
     }
   };
   
-  // Get streak and last check-in from user profile
   const currentStreak = userProfile?.streakDays || 0;
   const lastCheckIn = userProfile?.lastCheckIn 
     ? userProfile.lastCheckIn.toDate() 
     : new Date();
   
-  // Calculate streak stats
   const longestStreak = Math.max(...mockStreakData.map(d => d.streak), currentStreak);
   const averageStreak = Math.round(mockStreakData.reduce((acc, curr) => acc + curr.streak, 0) / mockStreakData.length);
+  
+  const formattedTriggerData = triggerData.map(trigger => {
+    const triggerOption = triggerOptions.find(option => option.value === trigger.name);
+    return {
+      name: triggerOption?.label || trigger.name,
+      count: trigger.count
+    };
+  });
   
   return (
     <motion.div 
@@ -242,45 +275,63 @@ const Analytics: React.FC = () => {
               <CardContent>
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    {mockTriggers.map((trigger, index) => (
-                      <div key={trigger.name} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">{trigger.name}</span>
-                          <span className="text-sm text-muted-foreground">{trigger.count} times</span>
-                        </div>
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <motion.div 
-                            className="h-full bg-primary rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(trigger.count / Math.max(...mockTriggers.map(t => t.count))) * 100}%` }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
-                          />
-                        </div>
+                    {isLoading ? (
+                      <div className="flex justify-center p-6">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                       </div>
-                    ))}
+                    ) : triggerData.length === 0 ? (
+                      <div className="text-center p-6 text-muted-foreground">
+                        No trigger data available for the last 7 days
+                      </div>
+                    ) : (
+                      formattedTriggerData.map((trigger, index) => (
+                        <div key={trigger.name} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">{trigger.name}</span>
+                            <span className="text-sm text-muted-foreground">{trigger.count} times</span>
+                          </div>
+                          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                            <motion.div 
+                              className="h-full bg-primary rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(trigger.count / Math.max(...formattedTriggerData.map(t => t.count))) * 100}%` }}
+                              transition={{ duration: 0.5, delay: index * 0.1 }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                   
                   <div className="p-4 bg-secondary rounded-lg">
                     <h4 className="font-medium mb-2">Personalized Recommendations</h4>
                     <ul className="space-y-2 text-sm">
-                      <li className="flex items-start gap-2">
-                        <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
-                          1
-                        </span>
-                        <span>Try the "Stress Management" meditation series to help cope with your main trigger</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
-                          2
-                        </span>
-                        <span>Consider developing a structured evening routine to reduce boredom triggers</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
-                          3
-                        </span>
-                        <span>Your mood is consistently higher when you maintain at least 3 days of streak</span>
-                      </li>
+                      {triggerData.length > 0 ? (
+                        <>
+                          <li className="flex items-start gap-2">
+                            <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                              1
+                            </span>
+                            <span>Try the "Stress Management" meditation series to help cope with your main trigger</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                              2
+                            </span>
+                            <span>Consider developing a structured evening routine to reduce boredom triggers</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                              3
+                            </span>
+                            <span>Your mood is consistently higher when you maintain at least 3 days of streak</span>
+                          </li>
+                        </>
+                      ) : (
+                        <li className="text-muted-foreground">
+                          Log relapses with triggers to receive personalized recommendations
+                        </li>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -307,20 +358,13 @@ const Analytics: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="trigger">What triggered this relapse?</Label>
-                  <Select value={selectedTrigger} onValueChange={setSelectedTrigger}>
-                    <SelectTrigger id="trigger">
-                      <SelectValue placeholder="Select a trigger" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="stress">Stress</SelectItem>
-                      <SelectItem value="boredom">Boredom</SelectItem>
-                      <SelectItem value="loneliness">Loneliness</SelectItem>
-                      <SelectItem value="fatigue">Fatigue</SelectItem>
-                      <SelectItem value="social-media">Social Media</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="trigger">What triggered this relapse? (select all that apply)</Label>
+                  <MultiSelect
+                    options={triggerOptions}
+                    selected={selectedTriggers}
+                    onChange={setSelectedTriggers}
+                    placeholder="Select triggers..."
+                  />
                 </div>
                 
                 <div className="space-y-2">
@@ -339,7 +383,7 @@ const Analytics: React.FC = () => {
                   variant="destructive" 
                   className="w-full"
                   onClick={handleRelapseSubmit}
-                  disabled={isSubmitting || !selectedTrigger}
+                  disabled={isSubmitting || selectedTriggers.length === 0}
                 >
                   {isSubmitting ? 'Submitting...' : 'Report Relapse & Reset Counter'}
                 </Button>

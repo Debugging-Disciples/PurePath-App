@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, limit } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 // Define user profile interface
@@ -240,12 +240,13 @@ export const updateStreak = async (userId: string) => {
   }
 };
 
-// Log relapse (used for analytics)
-export const logRelapse = async (userId: string, notes?: string) => {
+// Log relapse with multiple triggers (used for analytics)
+export const logRelapse = async (userId: string, triggers: string[], notes?: string) => {
   try {
-    await setDoc(doc(collection(db, 'relapses')), {
+    await addDoc(collection(db, 'relapses'), {
       userId,
       timestamp: Timestamp.now(),
+      triggers: triggers,
       notes: notes || ''
     });
     
@@ -260,6 +261,50 @@ export const logRelapse = async (userId: string, notes?: string) => {
   } catch (error) {
     console.error('Error logging relapse:', error);
     return { success: false, message: error.message };
+  }
+};
+
+// Get user triggers from the last 7 days
+export const getUserTriggers = async (userId: string) => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const relapsesRef = collection(db, 'relapses');
+    const q = query(
+      relapsesRef,
+      where('userId', '==', userId),
+      where('timestamp', '>=', Timestamp.fromDate(sevenDaysAgo)),
+      orderBy('timestamp', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    // Count the triggers
+    const triggerCounts = {};
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.triggers && Array.isArray(data.triggers)) {
+        data.triggers.forEach(trigger => {
+          triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
+        });
+      }
+    });
+    
+    // Convert to array format for chart
+    const triggers = Object.entries(triggerCounts).map(([name, count]) => ({
+      name,
+      count
+    }));
+    
+    // Sort by count (descending)
+    triggers.sort((a, b) => b.count - a.count);
+    
+    return triggers;
+  } catch (error) {
+    console.error('Error fetching user triggers:', error);
+    return [];
   }
 };
 
