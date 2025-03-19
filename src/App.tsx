@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import Profile from "./pages/Profile";
+import Goodbye from "./pages/Goodbye";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,15 @@ const App = () => (
                   element={
                     <AuthWrapper requireAuth requireAdmin>
                       <Admin />
+                    </AuthWrapper>
+                  } 
+                />
+
+<Route 
+                  path="/goodbye" 
+                  element={
+                    <AuthWrapper requireAuth>
+                      <Goodbye />
                     </AuthWrapper>
                   } 
                 />

@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, Trophy, CalendarDays, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from '@radix-ui/react-checkbox';
+import { string } from 'zod';
 
 // Mock data
 const mockStreakData = [
@@ -71,8 +72,7 @@ const Analytics: React.FC = () => {
     
     try {
       const relapseNotes = `Trigger: ${selectedTrigger}. Notes: ${notes}`;
-      const result = await logRelapse(currentUser.uid, relapseNotes);
-      
+      const result = await logRelapse(currentUser.uid, [...(relapseNotes || [])]);      
       if (result.success) {
         toast.success("Progress reset", {
           description: "Remember that every moment is a new opportunity to begin again."
@@ -307,7 +307,7 @@ const Analytics: React.FC = () => {
                 </CardDescription>
               </CardHeader>
 
-              
+
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="trigger">What triggered this relapse?</Label>
