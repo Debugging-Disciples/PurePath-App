@@ -22,6 +22,8 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('prefer-not-to-say');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +91,7 @@ const Register: React.FC = () => {
         // Continue without location
       }
       
-      const success = await register(email, password, username, gender, location);
+      const success = await register(email, password, username, firstName, lastName, gender, location);
       if (success) {
         navigate('/dashboard');
       }
@@ -117,6 +119,34 @@ const Register: React.FC = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="First name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                      className="bg-background"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                      className="bg-background"
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
                   <Input

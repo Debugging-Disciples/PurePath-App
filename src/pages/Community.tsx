@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,17 +8,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Send, Users, MessageCircle } from 'lucide-react';
+import { collection, getDocs, db, UserProfile } from '../utils/firebase';
+import { useAuth } from '../utils/auth';
 
-// Mock data for users and messages
-const MOCK_USERS = [
-  { id: '1', name: 'Sarah K.', streak: 45, avatar: '' },
-  { id: '2', name: 'Michael T.', streak: 30, avatar: '' },
-  { id: '3', name: 'David W.', streak: 120, avatar: '' },
-  { id: '4', name: 'Emma J.', streak: 60, avatar: '' },
-  { id: '5', name: 'Thomas P.', streak: 15, avatar: '' },
-  { id: '6', name: 'Jennifer L.', streak: 75, avatar: '' }
-];
-
+// Mock data for messages
 const MOCK_MESSAGES = [
   { id: '1', userId: '2', text: 'I just wanted to share that I hit 30 days today! It\'s been tough but so worth it.', timestamp: new Date(Date.now() - 60 * 60 * 1000) },
   { id: '2', userId: '1', text: 'Congratulations Michael! That\'s a huge milestone. What helped you the most?', timestamp: new Date(Date.now() - 55 * 60 * 1000) },
@@ -29,6 +22,34 @@ const MOCK_MESSAGES = [
 const Community: React.FC = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
+  
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const usersCollection = collection(db, 'users');
+        const userSnapshot = await getDocs(usersCollection);
+        const usersList: UserProfile[] = [];
+        
+        userSnapshot.forEach((doc) => {
+          usersList.push({ 
+            id: doc.id, 
+            ...doc.data() as Omit<UserProfile, 'id'> 
+          });
+        });
+        
+        setUsers(usersList);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUsers();
+  }, []);
   
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +59,7 @@ const Community: React.FC = () => {
     // Adding a new mock message
     const newMessage = {
       id: Date.now().toString(),
-      userId: '1', // Assuming current user is Sarah
+      userId: currentUser?.uid || '1', // Use current user's ID if available
       text: message,
       timestamp: new Date()
     };
@@ -55,6 +76,30 @@ const Community: React.FC = () => {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  };
+  
+  // Function to get a user's display name
+  const getUserDisplayName = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user && user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    } else if (user && user.username) {
+      return user.username;
+    } else {
+      return 'Anonymous';
+    }
+  };
+  
+  // Function to get user's initials for avatar
+  const getUserInitials = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user && user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`;
+    } else if (user && user.username) {
+      return user.username[0];
+    } else {
+      return 'U';
+    }
   };
   
   return (
@@ -104,8 +149,7 @@ const Community: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="h-[60vh] overflow-y-auto space-y-4 p-2">
                   {messages.map((msg, index) => {
-                    const user = MOCK_USERS.find(u => u.id === msg.userId);
-                    const isCurrentUser = msg.userId === '1'; // Sarah is current user
+                    const isCurrentUser = msg.userId === currentUser?.uid;
                     
                     return (
                       <motion.div
@@ -117,13 +161,13 @@ const Community: React.FC = () => {
                       >
                         <div className={`flex max-w-[80%] ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
                           <Avatar className={`h-8 w-8 ${isCurrentUser ? 'ml-2' : 'mr-2'}`}>
-                            <AvatarImage src={user?.avatar} />
-                            <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src="" />
+                            <AvatarFallback>{getUserInitials(msg.userId)}</AvatarFallback>
                           </Avatar>
                           
                           <div className={`space-y-1 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                             <div className="flex items-baseline gap-2">
-                              <span className="text-sm font-medium">{user?.name}</span>
+                              <span className="text-sm font-medium">{getUserDisplayName(msg.userId)}</span>
                               <span className="text-xs text-muted-foreground">
                                 {formatTimeAgo(msg.timestamp)}
                               </span>
@@ -176,42 +220,54 @@ const Community: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {MOCK_USERS.map((user, index) => (
-                <motion.div
-                  key={user.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-base">{user.name}</CardTitle>
-                            <CardDescription>
-                              <Badge variant="outline" className="mt-1">
-                                {user.streak} day streak
-                              </Badge>
-                            </CardDescription>
+            {loading ? (
+              <div className="text-center py-8">Loading members...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {users.map((user, index) => (
+                  <motion.div
+                    key={user.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src="" />
+                              <AvatarFallback>
+                                {user.firstName && user.lastName 
+                                  ? `${user.firstName[0]}${user.lastName[0]}`
+                                  : user.username ? user.username[0] : 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <CardTitle className="text-base">
+                                {user.firstName && user.lastName 
+                                  ? `${user.firstName} ${user.lastName}`
+                                  : user.username || 'Anonymous'}
+                              </CardTitle>
+                              <CardDescription>
+                                <Badge variant="outline" className="mt-1">
+                                  {user.streakDays || 0} day streak
+                                </Badge>
+                              </CardDescription>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardFooter className="pt-2">
-                      <Button variant="ghost" size="sm" className="w-full">
-                        Message
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                      </CardHeader>
+                      <CardFooter className="pt-2">
+                        <Button variant="ghost" size="sm" className="w-full">
+                          Message
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </motion.div>
         </TabsContent>
       </Tabs>

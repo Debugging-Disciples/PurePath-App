@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, limit } from 'firebase/firestore';
@@ -7,6 +6,8 @@ import { toast } from 'sonner';
 // Define user profile interface
 export interface UserProfile {
   id: string;
+  firstName?: string;
+  lastName?: string;
   username?: string;
   email?: string;
   gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
@@ -76,7 +77,7 @@ export const login = async (email: string, password: string) => {
   }
 };
 
-export const register = async (email: string, password: string, username: string, gender: string, location?: { lat: number, lng: number }) => {
+export const register = async (email: string, password: string, username: string, firstName: string, lastName: string, gender: string, location?: { lat: number, lng: number }) => {
   try {
     console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -84,6 +85,8 @@ export const register = async (email: string, password: string, username: string
     // Create user profile in Firestore
     await setDoc(doc(db, 'users', userCredential.user.uid), {
       username,
+      firstName,
+      lastName,
       email,
       gender,
       location: location ? new GeoPoint(location.lat, location.lng) : null,
