@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Send, Users, MessageCircle } from 'lucide-react';
-import { collection, getDocs, db, UserProfile } from '../utils/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import {db, UserProfile } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
 
 // Mock data for messages
