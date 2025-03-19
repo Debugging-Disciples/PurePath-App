@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { updateUserProfile, updateUserPassword } from "../utils/firebase";
+import {doc, deleteDoc} from "firebase/firestore";
 import { useAuth } from "../utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -219,14 +220,15 @@ const Profile: React.FC = () => {
   const deleteAccount = async (userId: string) => {
     try {
       // Delete user data from Firestore
-      const userDocRef = db.collection("users").doc(userId);
-      await userDocRef.delete();
+      const userRef = doc(db, 'users', userId);
+      await deleteDoc(userRef);
 
       // Delete the user authentication account
       const user = currentUser;
       if (user) {
         await user.delete();
       }
+      
       toast.success("Account deleted successfully");
     } catch (error) {
       console.error("Error deleting account:", error);
