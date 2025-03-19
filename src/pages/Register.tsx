@@ -9,12 +9,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion } from 'framer-motion';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [gender, setGender] = useState('prefer-not-to-say');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -30,7 +38,7 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    function isValidEmail(email) {
+    function isValidEmail(email: string) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;  // Simple email regex
       return emailRegex.test(email);
     }
@@ -81,11 +89,11 @@ const Register: React.FC = () => {
         // Continue without location
       }
       
-      const success = await register(email, password, username, location);
+      const success = await register(email, password, username, gender, location);
       if (success) {
         navigate('/dashboard');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'Failed to create account');
     } finally {
       setIsLoading(false);
@@ -134,6 +142,24 @@ const Register: React.FC = () => {
                     autoComplete="email"
                     className="bg-background"
                   />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select 
+                    value={gender} 
+                    onValueChange={setGender}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="space-y-2">

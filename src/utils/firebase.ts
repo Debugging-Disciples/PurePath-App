@@ -8,6 +8,7 @@ export interface UserProfile {
   id: string;
   username?: string;
   email?: string;
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
   location?: GeoPoint;
   role?: 'admin' | 'member';
   joinedAt?: Timestamp;
@@ -66,14 +67,16 @@ export const login = async (email: string, password: string) => {
   }
 };
 
-export const register = async (email: string, password: string, username: string, location?: { lat: number, lng: number }) => {
+export const register = async (email: string, password: string, username: string, gender: string, location?: { lat: number, lng: number }) => {
   try {
+    console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
     // Create user profile in Firestore
     await setDoc(doc(db, 'users', userCredential.user.uid), {
       username,
       email,
+      gender,
       location: location ? new GeoPoint(location.lat, location.lng) : null,
       role: 'member', // Default role
       joinedAt: Timestamp.now(),
@@ -84,6 +87,7 @@ export const register = async (email: string, password: string, username: string
     toast.success('Welcome to PurePath');
     return true;
   } catch (error) {
+    console.error('Registration error:', error);
     toast.error('Registration failed: ' + error.message);
     return false;
   }
