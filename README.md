@@ -3,8 +3,6 @@
 
 PurePath is a web application designed to help users break free from unwanted habits like PMO and build a life of purpose through community support, guided meditations, and progress tracking.
 
-
-
 ## Tech Stack
 
 This project is built with modern web technologies:
@@ -83,6 +81,17 @@ This project is built with modern web technologies:
 
 6. Open your browser and navigate to `http://localhost:8080`
 
+### Setting Up Admin Access
+
+PurePath includes an admin dashboard for managing users, content, and moderation. To set up admin access:
+
+1. Register a user account with the email that should have admin privileges
+2. You can set up admin access in one of two ways:
+   - **Option 1**: Use the Firestore Admin console to create an "admins" collection and add a document called "authorized_emails" with an array field named "emails" that includes the admin email(s)
+   - **Option 2**: For first-time setup, the application will automatically recognize the predefined admin email(s)
+
+3. When logged in as an admin, you can access the admin dashboard at `/admin`
+
 ### Building for Production
 
 ```bash
@@ -117,7 +126,7 @@ This application uses Firebase Authentication for user management. Users can:
 - Register with email and password
 - Log in with existing credentials
 - Access protected routes (dashboard, profile, etc.)
-- Admin users have access to additional 
+- Admin users have access to additional features and the admin dashboard
 
 ## Contributing
 
@@ -128,4 +137,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
