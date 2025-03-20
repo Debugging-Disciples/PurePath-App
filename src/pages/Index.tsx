@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
-import { ArrowRight, HeartPulse, Shield, Zap, Users, Map, Lock, AlertTriangle } from 'lucide-react';
+import { ArrowRight, HeartPulse, Shield, Zap, Users, Map, Lock, AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -53,7 +53,6 @@ const Index: React.FC = () => {
   
   return (
     <div className="min-h-screen">
-      {/* Firebase Initialization Error Alert */}
       {!firebaseInitialized && (
         <div className="px-6 py-4">
           <Alert variant="destructive">
@@ -66,7 +65,6 @@ const Index: React.FC = () => {
         </div>
       )}
       
-      {/* Hero Section */}
       <section className="relative py-20 md:py-32 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-secondary/50 to-transparent -z-10" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/10%),transparent_60%)] -z-10" />
@@ -119,7 +117,6 @@ const Index: React.FC = () => {
         </div>
       </section>
       
-      {/* Features Section */}
       <section className="py-20 px-6 bg-secondary/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
@@ -179,8 +176,7 @@ const Index: React.FC = () => {
         </div>
       </section>
       
-      {/* Testimonial Section */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 relative">
         <div className="max-w-4xl mx-auto">
           <motion.div 
             className="text-center mb-16"
@@ -195,29 +191,38 @@ const Index: React.FC = () => {
             <div className="w-16 h-1 bg-primary mx-auto"></div>
           </motion.div>
           
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              { quote: "Finally found a community that understands my struggle without judgment.", author: "Member since 2022" },
-              { quote: "The analytics helped me identify my triggers. I'm 90 days strong now.", author: "Member since 2023" },
-              { quote: "The panic button has saved me countless times. This app is lifechanging.", author: "Member since 2022" }
-            ].map((testimonial, index) => (
-              <motion.div
-                key={index}
-                className="glass-card p-6 rounded-xl"
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <blockquote className="text-lg mb-4">"{testimonial.quote}"</blockquote>
-                <p className="text-muted-foreground text-sm">{testimonial.author}</p>
-              </motion.div>
-            ))}
+          <div className="relative">
+            <div className="filter blur-md opacity-50">
+              <div className="grid gap-6 md:grid-cols-3">
+                {[
+                  { quote: "Finally found a community that understands my struggle without judgment.", author: "Member since 2022" },
+                  { quote: "The analytics helped me identify my triggers. I'm 90 days strong now.", author: "Member since 2023" },
+                  { quote: "The panic button has saved me countless times. This app is lifechanging.", author: "Member since 2022" }
+                ].map((testimonial, index) => (
+                  <motion.div
+                    key={index}
+                    className="glass-card p-6 rounded-xl"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <blockquote className="text-lg mb-4">"{testimonial.quote}"</blockquote>
+                    <p className="text-muted-foreground text-sm">{testimonial.author}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-sm rounded-xl">
+              <Clock className="h-12 w-12 text-primary mb-4 animate-pulse" />
+              <h3 className="text-2xl font-bold mb-2">Coming Soon</h3>
+              <p className="text-muted-foreground">Real member testimonials will be available shortly</p>
+            </div>
           </div>
         </div>
       </section>
       
-      {/* CTA Section */}
       <section className="py-20 px-6 bg-gradient-to-b from-secondary/50 to-background">
         <div className="max-w-5xl mx-auto text-center">
           <motion.h2 
@@ -264,7 +269,6 @@ const Index: React.FC = () => {
         </div>
       </section>
       
-      {/* Footer */}
       <footer className="py-8 px-6 border-t border-border">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
