@@ -1,9 +1,9 @@
 
 # PurePath
 
-PurePath is a web application designed to help users break free from unwanted habits and build a life of purpose through community support, guided meditations, and progress tracking.
+PurePath is a web application designed to help users break free from unwanted habits like PMO and build a life of purpose through community support, guided meditations, and progress tracking.
 
-![PurePath Screenshot](public/og-image.png)
+
 
 ## Tech Stack
 
@@ -117,11 +117,7 @@ This application uses Firebase Authentication for user management. Users can:
 - Register with email and password
 - Log in with existing credentials
 - Access protected routes (dashboard, profile, etc.)
-- Admin users have access to additional functionality
-
-## License
-
-[MIT](LICENSE)
+- Admin users have access to additional 
 
 ## Contributing
 
@@ -133,8 +129,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Contact
-
-Your Name - [@yourtwitterhandle](https://twitter.com/yourtwitterhandle)
-
-Project Link: [https://github.com/yourusername/purepath](https://github.com/yourusername/purepath)
