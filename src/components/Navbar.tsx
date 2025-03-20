@@ -1,12 +1,13 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../utils/auth";
 import { signOut } from "firebase/auth";
 import { auth } from "../utils/firebase";
 
 const Navbar = () => {
-  const { user } = useAuth();
+  const { currentUser: user } = useAuth();
 
   const handleSignOut = async () => {
     try {
