@@ -1,70 +1,47 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../utils/auth';
-import { logout } from '../utils/firebase';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useAuth } from "../hooks/useAuth";
+import { signOut } from "firebase/auth";
+import { auth } from "../utils/firebase";
 
-const Navbar: React.FC = () => {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
+const Navbar = () => {
+  const { user } = useAuth();
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      console.log('User signed out successfully.');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   return (
-    <div className="bg-background border-b">
-      <div className="container flex h-16 items-center justify-between py-4">
-        <Link to="/" className="font-bold text-2xl">
-          PurePath
+    <nav className="w-full py-4 px-6 flex items-center justify-between bg-background border-b">
+      <div className="flex items-center gap-6">
+        <Link to="/" className="text-xl font-bold">
+          Sober App
         </Link>
-        <nav>
-          {currentUser ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar>
-                    <AvatarImage src="/placeholder.svg" alt="User" />
-                    <AvatarFallback>{currentUser.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/dashboard">Dashboard</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div>
-              <Link to="/login" className="mr-4">
-                Login
-              </Link>
-              <Link to="/register">Register</Link>
-            </div>
-          )}
-        </nav>
+        <Link to="/community">Community</Link>
+        <Link to="/progress">Progress</Link>
       </div>
-    </div>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        {user ? (
+          <Button variant="outline" onClick={handleSignOut}>Sign Out</Button>
+        ) : (
+          <>
+            <Link to="/login">
+              <Button variant="outline">Log In</Button>
+            </Link>
+            <Link to="/register">
+              <Button>Register</Button>
+            </Link>
+          </>
+        )}
+      </div>
+    </nav>
   );
 };
 
