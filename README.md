@@ -3,7 +3,7 @@
 
 PurePath is a web application designed to help users break free from unwanted habits and build a life of purpose through community support, guided meditations, and progress tracking.
 
-![PurePath Screenshot](public/og-image.png)
+
 
 ## Tech Stack
 
