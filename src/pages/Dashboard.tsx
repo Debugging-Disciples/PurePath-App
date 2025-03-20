@@ -20,6 +20,7 @@ import MeditationCard from '@/components/MeditationCard';
 import CommunityMap from '@/components/CommunityMap';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import VerseSlideshow from '@/components/VerseSlideshow';
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('en-US', { 
@@ -308,6 +309,7 @@ const Dashboard: React.FC = () => {
         <h3 className="text-xl font-medium mb-3">Daily Inspiration</h3>
         <blockquote className="text-lg italic mb-4"> "-- QUOTE HERE --"
         </blockquote>
+        <VerseSlideshow />
         <p className="text-muted-foreground">Scripture Quote</p>
       </div>
     </motion.div>
