@@ -307,10 +307,7 @@ const Dashboard: React.FC = () => {
       
       <div className="glass-card rounded-lg p-6 text-center">
         <h3 className="text-xl font-medium mb-3">Daily Inspiration</h3>
-        <blockquote className="text-lg italic mb-4"> "-- QUOTE HERE --"
-        </blockquote>
         <VerseSlideshow />
-        <p className="text-muted-foreground">Scripture Quote</p>
       </div>
     </motion.div>
   );

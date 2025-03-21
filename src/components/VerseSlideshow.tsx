@@ -29,7 +29,7 @@ const VerseSlideshow: React.FC<VerseSlideshowProps> = ({ className }) => {
 
   return (
     <div className={cn("default-class", className)}>
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {Object.entries(verseReferences).map(
           ([reference, text], index) =>
             index === currentIndex && (
@@ -38,6 +38,7 @@ const VerseSlideshow: React.FC<VerseSlideshowProps> = ({ className }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
               >
                 <VerseSlide verseReference={reference} verseText={text} />
               </motion.div>
