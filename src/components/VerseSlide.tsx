@@ -1,7 +1,5 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface VerseSlideProps {
   className?: string;
