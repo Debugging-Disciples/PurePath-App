@@ -72,8 +72,9 @@ This project is built with modern web technologies:
    ```
 
    You can use the `.env.sample` file as a template.
+**Note: Enable email/pwd authentication in your firebase console.**
 
-5. Start the development server:
+6. Start the development server:
    ```bash
    npm run dev
    # or
@@ -82,7 +83,7 @@ This project is built with modern web technologies:
    pnpm dev
    ```
 
-6. Open your browser and navigate to `http://localhost:8080`
+7. Open your browser and navigate to `http://localhost:8080`
 
 ### Building for Production
 
