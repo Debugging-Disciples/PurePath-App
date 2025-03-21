@@ -1,9 +1,8 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./utils/auth";
 import AuthWrapper from "./components/AuthWrapper";
 
@@ -41,74 +40,74 @@ const App = () => (
                 <Route path="/register" element={<Register />} />
 
                 {/* Protected member routes */}
-                <Route 
-                  path="/dashboard" 
+                <Route
+                  path="/dashboard"
                   element={
                     <AuthWrapper requireAuth>
                       <Dashboard />
                     </AuthWrapper>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/profile" 
+                <Route
+                  path="/profile"
                   element={
                     <AuthWrapper requireAuth>
                       <Profile />
                     </AuthWrapper>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/community" 
+                <Route
+                  path="/community"
                   element={
                     <AuthWrapper requireAuth>
                       <Community />
                     </AuthWrapper>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/meditations" 
+                <Route
+                  path="/meditations"
                   element={
                     <AuthWrapper requireAuth>
                       <Meditations />
                     </AuthWrapper>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/analytics" 
+                <Route
+                  path="/analytics"
                   element={
                     <AuthWrapper requireAuth>
                       <Analytics />
                     </AuthWrapper>
-                  } 
+                  }
                 />
-                <Route 
-                  path="/map" 
+                <Route
+                  path="/map"
                   element={
                     <AuthWrapper requireAuth>
                       <Map />
                     </AuthWrapper>
-                  } 
+                  }
                 />
 
                 {/* Admin routes */}
-                <Route 
-                  path="/admin" 
+                <Route
+                  path="/admin"
                   element={
                     <AuthWrapper requireAuth requireAdmin>
                       <Admin />
                     </AuthWrapper>
-                  } 
+                  }
                 />
 
-<Route 
-                  path="/goodbye" 
+                <Route
+                  path="/goodbye"
                   element={
                     <AuthWrapper requireAuth>
                       <Goodbye />
                     </AuthWrapper>
-                  } 
+                  }
                 />
-                
+
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

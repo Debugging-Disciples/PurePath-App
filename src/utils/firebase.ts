@@ -63,62 +63,25 @@ export { app, auth, db };
 // Secure way to check for admin permissions
 // This function uses a hash comparison approach to avoid exposing the email directly
 export const isUserAdmin = async (email: string): Promise<boolean> => {
-  if (!db) return false;
-  
+  if (!db) {
+    console.error("Firebase db not initialized");
+    return false;
+  }
+
   try {
-    // First approach: Check if user has admin role in their profile
+    // Query the Firestore users collection to check if the user with the given email has the role "admin"
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email), where('role', '==', 'admin'));
     const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      return true;
-    }
-    
-    // Second approach: Check against admins collection
-    const adminsRef = collection(db, 'admins');
-    const adminDoc = await getDoc(doc(adminsRef, 'authorized_emails'));
-    
-    if (adminDoc.exists() && adminDoc.data().emails) {
-      return adminDoc.data().emails.includes(email);
-    }
-    
-    // Fallback to hardcoded verification (using a hashed comparison for security)
-    // This allows initial admin setup even if collections don't exist yet
-    const adminHash = 'b42a70c370ad4562dbd5166f1275324fa254299f'; // SHA1 hash of "justinh.tech1@gmail.com"
-    const emailHash = await sha1(email.trim().toLowerCase());
-    
-    return emailHash === adminHash;
+
+    // If the query returns any documents, the user is an admin
+    return !querySnapshot.empty;
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
   }
 };
 
-// Utility function to create SHA-1 hash for email comparison
-// This prevents exposing the actual admin email in the code
-async function sha1(str: string): Promise<string> {
-  const buffer = new TextEncoder().encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Admin setup function (should be called once to set up the admin in Firestore)
-export const setupAdminUser = async () => {
-  if (!db) return;
-  
-  try {
-    const adminsRef = collection(db, 'admins');
-    await setDoc(doc(adminsRef, 'authorized_emails'), {
-      emails: ['justinh.tech1@gmail.com']
-    });
-    
-    console.log('Admin setup complete');
-  } catch (error) {
-    console.error('Error setting up admin:', error);
-  }
-};
 
 // Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
