@@ -39,7 +39,7 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({
 
   // Check admin role
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

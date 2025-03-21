@@ -1,7 +1,7 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User } from 'firebase/auth';
-import { auth, getUserProfile, UserProfile } from './firebase';
+import { auth, getUserProfile, UserProfile, isUserAdmin } from './firebase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<'admin' | 'member' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [firebaseInitialized, setFirebaseInitialized] = useState(!!auth);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Check if Firebase is initialized
@@ -51,15 +52,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const profile = await getUserProfile(user.uid);
           console.log("User profile:", profile);
           setUserProfile(profile);
-          setUserRole(profile?.role || 'member');
+          
+          // Check if user is admin
+          const adminStatus = await isUserAdmin(user.email || '');
+          setIsAdmin(adminStatus);
+          
+          // Set role based on admin status or profile
+          if (adminStatus) {
+            setUserRole('admin');
+          } else {
+            setUserRole(profile?.role || 'member');
+          }
         } catch (error) {
           console.error('Error fetching user profile:', error);
           setUserProfile(null);
           setUserRole(null);
+          setIsAdmin(false);
         }
       } else {
         setUserProfile(null);
         setUserRole(null);
+        setIsAdmin(false);
       }
       
       setIsLoading(false);
@@ -75,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     currentUser,
     userProfile,
     userRole,
-    isAdmin: userRole === 'admin',
+    isAdmin,
     isLoading,
     firebaseInitialized
   };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { updateUserProfile, updateUserPassword } from "../utils/firebase";
-import {doc, deleteDoc} from "firebase/firestore";
+import {doc, deleteDoc, collection, getDocs, query, where} from "firebase/firestore";
 import { useAuth } from "../utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ import * as z from "zod";
 import { db } from "../utils/firebase";
 import { Trash2, User, Link as LinkIcon } from "lucide-react";
 import SocialMediaLinks from "@/components/SocialMedia";
-const currentUser = useAuth;
+
 
 // Profile form schema
 const profileFormSchema = z.object({
@@ -86,6 +86,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 const Profile: React.FC = () => {
+  const [userInitials, setUserInitials] = useState("U");
   const { currentUser, userProfile, isLoading } = useAuth();
   const navigate = useNavigate();
   const [updateLoading, setUpdateLoading] = useState(false);
@@ -114,6 +115,44 @@ const Profile: React.FC = () => {
       },
     },
   });
+
+  // Get user initials
+  
+  useEffect(() => {
+    const fetchUserInitials = async () => {
+      if (currentUser && currentUser.email) {
+        try {
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("email", "==", currentUser.email));
+          const querySnapshot = await getDocs(q);
+          console.log(q);
+          if (!querySnapshot.empty) {
+            // Assuming only one document matches the email.
+            const userDoc = querySnapshot.docs[0].data();
+            const firstname = userDoc.firstName || "";
+            const lastname = userDoc.lastName || "";
+
+            if (firstname || lastname) {
+              const initials =
+                (firstname.charAt(0).toUpperCase() || "") +
+                (lastname.charAt(0).toUpperCase() || "");
+              setUserInitials(initials);
+            } else {
+              setUserInitials("U");
+            }
+          } else {
+            setUserInitials("U"); // No document found for this email.
+          }
+        } catch (error) {
+          console.error("Error fetching user initials:", error);
+          setUserInitials("U"); // Fallback in case of an error.
+        }
+      }
+    };
+
+    fetchUserInitials();
+  }, [currentUser]);
+
 
   // Update form when userProfile changes
   useEffect(() => {
@@ -210,13 +249,7 @@ const Profile: React.FC = () => {
     );
   }
 
-  // Create user initials for avatar
-  const getInitials = () => {
-    if (userProfile.username) {
-      return userProfile.username.charAt(0).toUpperCase();
-    }
-    return currentUser.email?.charAt(0).toUpperCase() || "U";
-  };
+
   const deleteAccount = async (userId: string) => {
     try {
       // Delete user data from Firestore
@@ -251,11 +284,11 @@ const Profile: React.FC = () => {
             <div className="flex flex-col items-center">
               <Avatar className="h-20 w-20 mb-4">
                 <AvatarFallback className="text-xl">
-                  {getInitials()}
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
               <CardTitle className="text-center">
-                {userProfile.username || "User"}
+                {userProfile.firstName + " "  + userProfile.lastName || "User"}
               </CardTitle>
               <CardDescription className="text-center mt-1">
                 {currentUser.email}

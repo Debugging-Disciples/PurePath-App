@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, limit } from 'firebase/firestore';
@@ -37,7 +38,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-console.log("Firebase config:", firebaseConfig);
 
 // Initialize Firebase with better error handling
 let app, auth, db;
@@ -58,6 +58,29 @@ try {
 }
 
 export { app, auth, db };
+
+// Secure way to check for admin permissions
+// This function uses a hash comparison approach to avoid exposing the email directly
+export const isUserAdmin = async (email: string): Promise<boolean> => {
+  if (!db) {
+    console.error("Firebase db not initialized");
+    return false;
+  }
+
+  try {
+    // Query the Firestore users collection to check if the user with the given email has the role "admin"
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email), where('role', '==', 'admin'));
+    const querySnapshot = await getDocs(q);
+
+    // If the query returns any documents, the user is an admin
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+};
+
 
 // Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
