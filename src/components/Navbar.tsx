@@ -48,7 +48,7 @@ const Navbar: React.FC = () => {
           const usersRef = collection(db, "users");
           const q = query(usersRef, where("email", "==", currentUser.email));
           const querySnapshot = await getDocs(q);
-          console.log(q);
+          // console.log(q);
           if (!querySnapshot.empty) {
             // Assuming only one document matches the email.
             const userDoc = querySnapshot.docs[0].data();
