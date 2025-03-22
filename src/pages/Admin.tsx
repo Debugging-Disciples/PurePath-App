@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +57,40 @@ interface CheckInTime {
   count: number;
 }
 
+// Type for flagged content
+interface FlaggedContent {
+  id: string;
+  user: string;
+  content: string;
+  date: string;
+  status: 'pending' | 'reviewed';
+}
+
+// Mock data for flagged content
+const MOCK_FLAGGED_CONTENT: FlaggedContent[] = [
+  {
+    id: '1',
+    user: 'John Doe',
+    content: 'This message contains potentially inappropriate content that has been flagged by our system.',
+    date: '2023-06-15T10:30:00',
+    status: 'pending'
+  },
+  {
+    id: '2',
+    user: 'Jane Smith',
+    content: 'Another message that was reported by community members for review.',
+    date: '2023-06-14T15:45:00',
+    status: 'reviewed'
+  },
+  {
+    id: '3',
+    user: 'Alex Johnson',
+    content: 'This comment was flagged for containing potential misinformation.',
+    date: '2023-06-13T09:15:00',
+    status: 'pending'
+  }
+];
+
 const Admin: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -65,7 +98,6 @@ const Admin: React.FC = () => {
   const [checkInTimes, setCheckInTimes] = useState<CheckInTime[]>([]);
   const isMobile = useIsMobile();
   
-  // Fetch users from Firebase
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -104,7 +136,6 @@ const Admin: React.FC = () => {
     fetchUsers();
   }, []);
   
-  // Helper function to check if a timestamp is within the last week
   const isWithinLastWeek = (timestamp: Timestamp) => {
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
@@ -112,12 +143,10 @@ const Admin: React.FC = () => {
     return timestamp.toDate() > lastWeek;
   };
   
-  // Process check-in times for visualization
   const processCheckInTimes = (userData: User[]) => {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const checkInData: Record<string, Record<number, number>> = {};
     
-    // Initialize data structure
     dayNames.forEach(day => {
       checkInData[day] = {};
       for (let hour = 0; hour < 24; hour++) {
@@ -125,7 +154,6 @@ const Admin: React.FC = () => {
       }
     });
     
-    // Process each user's last check-in
     userData.forEach(user => {
       if (user.lastCheckIn) {
         const checkInDate = user.lastCheckIn.toDate();
@@ -136,7 +164,6 @@ const Admin: React.FC = () => {
       }
     });
     
-    // Convert to chart format
     const chartData: CheckInTime[] = [];
     Object.entries(checkInData).forEach(([day, hours]) => {
       Object.entries(hours).forEach(([hour, count]) => {
@@ -153,20 +180,17 @@ const Admin: React.FC = () => {
     setCheckInTimes(chartData);
   };
   
-  // Filter users based on search term
   const filteredUsers = users.filter(user => 
     (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
     (user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
   );
   
-  // For the check-in time visualization
   const getHourLabel = (hour: number) => {
-    const hourStr = hour % 12 || 12; // Convert 0 to 12
+    const hourStr = hour % 12 || 12;
     const ampm = hour < 12 ? 'AM' : 'PM';
     return `${hourStr}${ampm}`;
   };
   
-  // Get color based on day of week
   const getDayColor = (day: string) => {
     const colors = {
       'Monday': '#7dd3fc',
@@ -764,3 +788,4 @@ const Admin: React.FC = () => {
 };
 
 export default Admin;
+
