@@ -1,7 +1,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, limit } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 // Define user profile interface
@@ -68,12 +68,10 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
   }
 
   try {
-    // Query the Firestore users collection to check if the user with the given email has the role "admin"
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email), where('role', '==', 'admin'));
     const querySnapshot = await getDocs(q);
 
-    // If the query returns any documents, the user is an admin
     return !querySnapshot.empty;
   } catch (error) {
     console.error('Error checking admin status:', error);
@@ -111,6 +109,8 @@ export const register = async (email: string, password: string, username: string
       firstName,
       lastName,
       email,
+      meditations: [],
+      relapses: [],  
       gender,
       location: location ? new GeoPoint(location.lat, location.lng) : null,
       role: 'member', // Default role
@@ -270,23 +270,26 @@ export const updateStreak = async (userId: string) => {
   }
 };
 
-// Log relapse with multiple triggers (used for analytics)
-export const logRelapse = async (userId: string, triggers: string[], notes?: string) => {
+// Log relapse - used for analytics
+interface LogRelapseResult {
+  success: boolean;
+  message?: string;
+}
+
+
+export const logRelapse = async (userId: string, triggers: string[], notes?: string): Promise<LogRelapseResult> => {
   try {
-    await addDoc(collection(db, 'relapses'), {
-      userId,
+    const userDocRef = doc(db, 'users', userId);  // Reference to the user's document
+
+    const relapseObject = {
       timestamp: Timestamp.now(),
       triggers: triggers,
       notes: notes || ''
+    };
+
+    await updateDoc(userDocRef, {
+      relapses: arrayUnion(relapseObject) // Append the relapse object to the 'relapses' array
     });
-    
-    // Reset streak
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      streakDays: 0,
-      lastCheckIn: Timestamp.now()
-    });
-    
     return { success: true, message: 'Progress reset. Remember: every moment is a new opportunity.' };
   } catch (error) {
     console.error('Error logging relapse:', error);
