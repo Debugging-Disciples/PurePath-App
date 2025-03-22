@@ -277,7 +277,7 @@ interface LogRelapseResult {
 }
 
 
-export const logRelapse = async (userId: string, triggers: string[], notes?: string): Promise<LogRelapseResult> => {
+export const logRelapse = async (userId: string, triggers: string, notes?: string): Promise<LogRelapseResult> => {
   try {
     const userDocRef = doc(db, 'users', userId);  // Reference to the user's document
 
@@ -298,48 +298,48 @@ export const logRelapse = async (userId: string, triggers: string[], notes?: str
 };
 
 // Get user triggers from the last 7 days
-export const getUserTriggers = async (userId: string): Promise<{ name: string; count: number; }[]> => {
-  try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+// export const getUserTriggers = async (userId: string): Promise<{ name: string; count: number; }[]> => {
+//   try {
+//     const sevenDaysAgo = new Date();
+//     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const relapsesRef = collection(db, 'relapses');
-    const q = query(
-      relapsesRef,
-      where('userId', '==', userId),
-      where('timestamp', '>=', Timestamp.fromDate(sevenDaysAgo)),
-      orderBy('timestamp', 'desc')
-    );
+//     const relapsesRef = collection(db, 'relapses');
+//     const q = query(
+//       relapsesRef,
+//       where('userId', '==', userId),
+//       where('timestamp', '>=', Timestamp.fromDate(sevenDaysAgo)),
+//       orderBy('timestamp', 'desc')
+//     );
     
-    const querySnapshot = await getDocs(q);
+//     const querySnapshot = await getDocs(q);
     
-    // Count the triggers
-    const triggerCounts: Record<string, number> = {};
+//     // Count the triggers
+//     const triggerCounts: Record<string, number> = {};
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.triggers && Array.isArray(data.triggers)) {
-        data.triggers.forEach(trigger => {
-          triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
-        });
-      }
-    });
+//     querySnapshot.forEach((doc) => {
+//       const data = doc.data();
+//       if (data.triggers && Array.isArray(data.triggers)) {
+//         data.triggers.forEach(trigger => {
+//           triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
+//         });
+//       }
+//     });
     
-    // Convert to array format for chart
-    const triggers = Object.entries(triggerCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
+//     // Convert to array format for chart
+//     const triggers = Object.entries(triggerCounts).map(([name, count]) => ({
+//       name,
+//       count
+//     }));
     
-    // Sort by count (descending)
-    triggers.sort((a, b) => b.count - a.count);
+//     // Sort by count (descending)
+//     triggers.sort((a, b) => b.count - a.count);
     
-    return triggers;
-  } catch (error) {
-    console.error('Error fetching user triggers:', error);
-    return [];
-  }
-};
+//     return triggers;
+//   } catch (error) {
+//     console.error('Error fetching user triggers:', error);
+//     return [];
+//   }
+// };
 
 // Community map data (anonymized)
 export const getCommunityLocations = async () => {
