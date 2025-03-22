@@ -22,13 +22,12 @@ import ProgressChart from "@/components/ProgressChart";
 import { logRelapse } from "../utils/firebase";
 import { useAuth } from "../utils/auth";
 import { motion } from "framer-motion";
-import { AlertTriangle, Trophy, CalendarDays, TrendingUp } from "lucide-react";
+import { AlertTriangle, Trophy, CalendarDays, TrendingUp, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { db } from "../utils/firebase";
 import { collection, doc, getDoc } from "firebase/firestore";
 
-// Mock data
 const mockStreakData = [
   { date: "Jan 1", streak: 1 },
   { date: "Jan 2", streak: 2 },
@@ -63,8 +62,6 @@ const mockMoodData = [
   { date: "Jan 14", streak: 5, mood: 9 },
 ];
 
-// Usage
-
 const Analytics: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [notes, setNotes] = useState("");
@@ -73,7 +70,7 @@ const Analytics: React.FC = () => {
   const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
     []
   );
-  //triggers fetching from firebase
+
   const useTriggers = (uid: string | undefined) => {
     useEffect(() => {
       if (!uid) return;
@@ -144,22 +141,18 @@ const Analytics: React.FC = () => {
     }
   };
 
-  // Get streak and last check-in from user profile
   const currentStreak = userProfile?.streakDays || 0;
   const lastCheckIn = userProfile?.lastCheckIn
     ? userProfile.lastCheckIn.toDate()
     : new Date();
 
-  // Calculate streak stats
   const longestStreak = Math.max(
     ...mockStreakData.map((d) => d.streak),
     currentStreak
   );
-  // const averageStreak = Math.round(
-  //   mockStreakData.reduce((acc, curr) => acc + curr.streak, 0) /
-  //     mockStreakData.length
-  // );
+
   const Triggers = useTriggers(currentUser?.uid);
+  const hasNoTriggerData = Triggers.length === 0;
 
   function capitalize(val) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
@@ -298,36 +291,43 @@ const Analytics: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="space-y-4">
-                    {Triggers.map((trigger, index) => (
-                      <div key={trigger.name} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">
-                            {capitalize(trigger.name)}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {trigger.count} times
-                          </span>
+                  {hasNoTriggerData ? (
+                    <div className="flex flex-col items-center justify-center py-8 bg-[#F2FCE2] rounded-lg">
+                      <Check className="h-16 w-16 text-green-500 mb-2" />
+                      <p className="text-center text-muted-foreground">No trigger data yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {Triggers.map((trigger, index) => (
+                        <div key={trigger.name} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">
+                              {capitalize(trigger.name)}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {trigger.count} times
+                            </span>
+                          </div>
+                          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full bg-primary rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{
+                                width: `${
+                                  (trigger.count /
+                                    Math.max(
+                                      ...Triggers.map((t) => t.count)
+                                    )) *
+                                  100
+                                }%`,
+                              }}
+                              transition={{ duration: 0.5, delay: index * 0.1 }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full bg-primary rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${
-                                (trigger.count /
-                                  Math.max(
-                                    ...Triggers.map((t) => t.count)
-                                  )) *
-                                100
-                              }%`,
-                            }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="p-4 bg-secondary rounded-lg">
                     <h4 className="font-medium mb-2">
