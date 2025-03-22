@@ -73,7 +73,7 @@ const Analytics: React.FC = () => {
   const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
     []
   );
-
+  //triggers fetching from firebase
   const useTriggers = (uid: string | undefined) => {
     useEffect(() => {
       if (!uid) return;
