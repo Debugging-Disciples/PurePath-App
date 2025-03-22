@@ -28,7 +28,7 @@ This project is built with modern web technologies:
 - 🧘 **Guided Meditations**: Access specialized meditations
 - 🆘 **Emergency Support**: Panic button for immediate help
 - 🌍 **Global Community**: Connect with others on the same journey
-- 🔐 **Privacy-Focused**: All data is private and anonymized
+
 
 ## Getting Started
 
