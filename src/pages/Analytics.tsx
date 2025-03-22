@@ -1,115 +1,222 @@
-
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import ProgressChart from '@/components/ProgressChart';
-import { logRelapse } from '../utils/firebase';
-import { useAuth } from '../utils/auth';
-import { motion } from 'framer-motion';
-import { AlertTriangle, Trophy, CalendarDays, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import ProgressChart from "@/components/ProgressChart";
+import { logRelapse } from "../utils/firebase";
+import { useAuth } from "../utils/auth";
+import { motion } from "framer-motion";
+import { AlertTriangle, Trophy, CalendarDays, TrendingUp } from "lucide-react";
+import { toast } from "sonner";
+import { useEffect } from "react";
+import { db } from "../utils/firebase";
+import { collection, doc, getDoc } from "firebase/firestore";
 
 // Mock data
 const mockStreakData = [
-  { date: 'Jan 1', streak: 1 },
-  { date: 'Jan 2', streak: 2 },
-  { date: 'Jan 3', streak: 3 },
-  { date: 'Jan 4', streak: 4 },
-  { date: 'Jan 5', streak: 5 },
-  { date: 'Jan 6', streak: 6 },
-  { date: 'Jan 7', streak: 7 },
-  { date: 'Jan 8', streak: 8 },
-  { date: 'Jan 9', streak: 0 }, // relapse
-  { date: 'Jan 10', streak: 1 },
-  { date: 'Jan 11', streak: 2 },
-  { date: 'Jan 12', streak: 3 },
-  { date: 'Jan 13', streak: 4 },
-  { date: 'Jan 14', streak: 5 }
+  { date: "Jan 1", streak: 1 },
+  { date: "Jan 2", streak: 2 },
+  { date: "Jan 3", streak: 3 },
+  { date: "Jan 4", streak: 4 },
+  { date: "Jan 5", streak: 5 },
+  { date: "Jan 6", streak: 6 },
+  { date: "Jan 7", streak: 7 },
+  { date: "Jan 8", streak: 8 },
+  { date: "Jan 9", streak: 0 }, // relapse
+  { date: "Jan 10", streak: 1 },
+  { date: "Jan 11", streak: 2 },
+  { date: "Jan 12", streak: 3 },
+  { date: "Jan 13", streak: 4 },
+  { date: "Jan 14", streak: 5 },
 ];
 
 const mockMoodData = [
-  { date: 'Jan 1', streak: 1, mood: 5 },
-  { date: 'Jan 2', streak: 2, mood: 6 },
-  { date: 'Jan 3', streak: 3, mood: 7 },
-  { date: 'Jan 4', streak: 4, mood: 8 },
-  { date: 'Jan 5', streak: 5, mood: 7 },
-  { date: 'Jan 6', streak: 6, mood: 9 },
-  { date: 'Jan 7', streak: 7, mood: 8 },
-  { date: 'Jan 8', streak: 8, mood: 8 },
-  { date: 'Jan 9', streak: 0, mood: 3 }, // relapse day
-  { date: 'Jan 10', streak: 1, mood: 4 },
-  { date: 'Jan 11', streak: 2, mood: 6 },
-  { date: 'Jan 12', streak: 3, mood: 7 },
-  { date: 'Jan 13', streak: 4, mood: 8 },
-  { date: 'Jan 14', streak: 5, mood: 9 }
+  { date: "Jan 1", streak: 1, mood: 5 },
+  { date: "Jan 2", streak: 2, mood: 6 },
+  { date: "Jan 3", streak: 3, mood: 7 },
+  { date: "Jan 4", streak: 4, mood: 8 },
+  { date: "Jan 5", streak: 5, mood: 7 },
+  { date: "Jan 6", streak: 6, mood: 9 },
+  { date: "Jan 7", streak: 7, mood: 8 },
+  { date: "Jan 8", streak: 8, mood: 8 },
+  { date: "Jan 9", streak: 0, mood: 3 }, // relapse day
+  { date: "Jan 10", streak: 1, mood: 4 },
+  { date: "Jan 11", streak: 2, mood: 6 },
+  { date: "Jan 12", streak: 3, mood: 7 },
+  { date: "Jan 13", streak: 4, mood: 8 },
+  { date: "Jan 14", streak: 5, mood: 9 },
 ];
+// Fetch triggers from Firebase
+const useTriggers = (uid: string | undefined) => {
+  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
+    []
+  );
 
-// Mock triggers
-const mockTriggers = [
-  { name: 'Stress', count: 12 },
-  { name: 'Boredom', count: 8 },
-  { name: 'Loneliness', count: 5 },
-  { name: 'Fatigue', count: 4 },
-  { name: 'Social Media', count: 7 }
-];
+  useEffect(() => {
+    if (!uid) return;
+
+    const fetchTriggers = async () => {
+      try {
+        const userDocRef = doc(collection(db, "users"), uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const relapses = userDoc.data().relapses || [];
+          const triggerCounts: Record<string, number> = {};
+
+          relapses.forEach((relapse: { triggers: string }) => {
+            const trigger = relapse.triggers;
+            if (trigger) {
+              triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
+            }
+          });
+
+          const formattedTriggers = Object.entries(triggerCounts).map(
+            ([name, count]) => ({
+              name,
+              count,
+            })
+          );
+
+          setTriggers(formattedTriggers);
+        }
+      } catch (error) {
+        console.error("Error fetching triggers:", error);
+      }
+    };
+
+    fetchTriggers();
+  }, [uid]);
+
+  return triggers;
+};
+
+// Usage
 
 const Analytics: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
-  const [notes, setNotes] = useState('');
-  const [selectedTrigger, setSelectedTrigger] = useState('');
+  const [notes, setNotes] = useState("");
+  const [selectedTrigger, setSelectedTrigger] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
+    []
+  );
+
+  const useTriggers = (uid: string | undefined) => {
+    useEffect(() => {
+      if (!uid) return;
+
+      const fetchTriggers = async () => {
+        try {
+          const userDocRef = doc(collection(db, "users"), uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const relapses = userDoc.data().relapses || [];
+            const triggerCounts: Record<string, number> = {};
+
+            relapses.forEach((relapse: { triggers: string }) => {
+              const trigger = relapse.triggers;
+              if (trigger) {
+                triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
+              }
+            });
+
+            const formattedTriggers = Object.entries(triggerCounts).map(
+              ([name, count]) => ({
+                name,
+                count,
+              })
+            );
+
+            setTriggers(formattedTriggers);
+          }
+        } catch (error) {
+          console.error("Error fetching triggers:", error);
+        }
+      };
+
+      fetchTriggers();
+    }, [uid]);
+
+    return triggers;
+  };
+
   const handleRelapseSubmit = async () => {
     if (!currentUser) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      const result = await logRelapse(currentUser.uid, selectedTrigger, notes);      
+      const result = await logRelapse(currentUser.uid, selectedTrigger, notes);
       if (result.success) {
         toast.success("Progress reset", {
-          description: "Remember that every moment is a new opportunity to begin again."
+          description:
+            "Remember that every moment is a new opportunity to begin again.",
         });
-        
-        setNotes('');
-        setSelectedTrigger('');
+
+        setNotes("");
+        setSelectedTrigger("");
       } else {
         toast.error("Failed to log relapse", {
-          description: result.message
+          description: result.message,
         });
       }
     } catch (error) {
-      console.error('Error logging relapse:', error);
+      console.error("Error logging relapse:", error);
       toast.error("An error occurred", {
-        description: "Please try again later."
+        description: "Please try again later.",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   // Get streak and last check-in from user profile
   const currentStreak = userProfile?.streakDays || 0;
-  const lastCheckIn = userProfile?.lastCheckIn 
-    ? userProfile.lastCheckIn.toDate() 
+  const lastCheckIn = userProfile?.lastCheckIn
+    ? userProfile.lastCheckIn.toDate()
     : new Date();
-  
+
   // Calculate streak stats
-  const longestStreak = Math.max(...mockStreakData.map(d => d.streak), currentStreak);
-  const averageStreak = Math.round(mockStreakData.reduce((acc, curr) => acc + curr.streak, 0) / mockStreakData.length);
-  
+  const longestStreak = Math.max(
+    ...mockStreakData.map((d) => d.streak),
+    currentStreak
+  );
+  // const averageStreak = Math.round(
+  //   mockStreakData.reduce((acc, curr) => acc + curr.streak, 0) /
+  //     mockStreakData.length
+  // );
+  const Triggers = useTriggers(currentUser?.uid);
+
+  function capitalize(val) {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+  }
+
   return (
-    <motion.div 
+    <motion.div
       className="container max-w-6xl py-8 pb-16"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <motion.div 
+      <motion.div
         className="mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -120,7 +227,7 @@ const Analytics: React.FC = () => {
           Track your journey and identify patterns
         </p>
       </motion.div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -139,14 +246,12 @@ const Analytics: React.FC = () => {
                 <div className="text-5xl font-bold mb-1 text-primary">
                   {currentStreak}
                 </div>
-                <div className="text-muted-foreground">
-                  days
-                </div>
+                <div className="text-muted-foreground">days</div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -164,14 +269,12 @@ const Analytics: React.FC = () => {
                 <div className="text-5xl font-bold mb-1 text-primary">
                   {longestStreak}
                 </div>
-                <div className="text-muted-foreground">
-                  days
-                </div>
+                <div className="text-muted-foreground">days</div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -187,16 +290,16 @@ const Analytics: React.FC = () => {
             <CardContent className="flex items-center justify-center py-6">
               <div className="text-center">
                 <div className="text-xl font-medium mb-1">
-                  {lastCheckIn.toLocaleDateString('en-US', { 
-                    weekday: 'short',
-                    month: 'short', 
-                    day: 'numeric'
+                  {lastCheckIn.toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
                   })}
                 </div>
                 <div className="text-muted-foreground">
-                  {lastCheckIn.toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit'
+                  {lastCheckIn.toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </div>
               </div>
@@ -204,14 +307,14 @@ const Analytics: React.FC = () => {
           </Card>
         </motion.div>
       </div>
-      
+
       <Tabs defaultValue="progress">
         <TabsList className="mb-6">
           <TabsTrigger value="progress">Progress Charts</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="relapse">Report Relapse</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="progress">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -223,7 +326,7 @@ const Analytics: React.FC = () => {
             <ProgressChart data={mockMoodData} type="mood" />
           </motion.div>
         </TabsContent>
-        
+
         <TabsContent value="insights">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -240,44 +343,67 @@ const Analytics: React.FC = () => {
               <CardContent>
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    {mockTriggers.map((trigger, index) => (
+                    {Triggers.map((trigger, index) => (
                       <div key={trigger.name} className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">{trigger.name}</span>
-                          <span className="text-sm text-muted-foreground">{trigger.count} times</span>
+                          <span className="text-sm font-medium">
+                            {capitalize(trigger.name)}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {trigger.count} times
+                          </span>
                         </div>
                         <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <motion.div 
+                          <motion.div
                             className="h-full bg-primary rounded-full"
                             initial={{ width: 0 }}
-                            animate={{ width: `${(trigger.count / Math.max(...mockTriggers.map(t => t.count))) * 100}%` }}
+                            animate={{
+                              width: `${
+                                (trigger.count /
+                                  Math.max(
+                                    ...Triggers.map((t) => t.count)
+                                  )) *
+                                100
+                              }%`,
+                            }}
                             transition={{ duration: 0.5, delay: index * 0.1 }}
                           />
                         </div>
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="p-4 bg-secondary rounded-lg">
-                    <h4 className="font-medium mb-2">Personalized Recommendations</h4>
+                    <h4 className="font-medium mb-2">
+                      Personalized Recommendations
+                    </h4>
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
                           1
                         </span>
-                        <span>Try the "Stress Management" meditation series to help cope with your main trigger</span>
+                        <span>
+                          Try the "Stress Management" meditation series to help
+                          cope with your main trigger
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
                           2
                         </span>
-                        <span>Consider developing a structured evening routine to reduce boredom triggers</span>
+                        <span>
+                          Consider developing a structured evening routine to
+                          reduce boredom triggers
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="bg-primary/10 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0 mt-0.5">
                           3
                         </span>
-                        <span>Your mood is consistently higher when you maintain at least 3 days of streak</span>
+                        <span>
+                          Your mood is consistently higher when you maintain at
+                          least 3 days of streak
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -286,7 +412,7 @@ const Analytics: React.FC = () => {
             </Card>
           </motion.div>
         </TabsContent>
-        
+
         <TabsContent value="relapse">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -300,15 +426,18 @@ const Analytics: React.FC = () => {
                   Report a Relapse
                 </CardTitle>
                 <CardDescription>
-                  Honesty is critical for true progress. Reporting relapses helps identify patterns.
+                  Honesty is critical for true progress. Reporting relapses
+                  helps identify patterns.
                 </CardDescription>
               </CardHeader>
-
 
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="trigger">What triggered this relapse?</Label>
-                  <Select value={selectedTrigger} onValueChange={setSelectedTrigger}>
+                  <Select
+                    value={selectedTrigger}
+                    onValueChange={setSelectedTrigger}
+                  >
                     <SelectTrigger id="trigger">
                       <SelectValue placeholder="Select a trigger" />
                     </SelectTrigger>
@@ -322,7 +451,7 @@ const Analytics: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes (optional)</Label>
                   <Textarea
@@ -335,17 +464,20 @@ const Analytics: React.FC = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   className="w-full"
                   onClick={handleRelapseSubmit}
                   disabled={isSubmitting || !selectedTrigger}
                 >
-                  {isSubmitting ? 'Submitting...' : 'Report Relapse & Reset Counter'}
+                  {isSubmitting
+                    ? "Submitting..."
+                    : "Report Relapse & Reset Counter"}
                 </Button>
-                
+
                 <p className="text-sm text-muted-foreground">
-                  Remember: this is a journey, not a competition. Every setback is an opportunity to learn.
+                  Remember: this is a journey, not a competition. Every setback
+                  is an opportunity to learn.
                 </p>
               </CardFooter>
             </Card>
