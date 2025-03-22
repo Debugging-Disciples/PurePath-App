@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { countries, usStates } from '@/utils/locationData';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -25,6 +26,8 @@ const Register: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('prefer-not-to-say');
+  const [country, setCountry] = useState('');
+  const [state, setState] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -65,31 +68,27 @@ const Register: React.FC = () => {
       setError('You must accept the Terms of Service and Privacy Policy');
       return;
     }
+
+    if (!country) {
+      setError('Please select your country');
+      return;
+    }
+
+    // If the country is US, state is required
+    if (country === 'us' && !state) {
+      setError('Please select your state');
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
     
     try {
-      // Get approximate location (using browser geolocation)
-      let location;
-      
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: false,
-            timeout: 5000,
-            maximumAge: 0
-          });
-        });
-        
-        location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-      } catch (err) {
-        console.log('Geolocation not available or denied', err);
-        // Continue without location
-      }
+      // Create location object with country and state (if applicable)
+      const location = {
+        country,
+        state: country === 'us' ? state : null
+      };
       
       const success = await register(email, password, username, firstName, lastName, gender, location);
       if (success) {
@@ -186,9 +185,56 @@ const Register: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="male">Male</SelectItem>
                       <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Select 
+                    value={country} 
+                    onValueChange={(value) => {
+                      setCountry(value);
+                      if (value !== 'us') {
+                        setState('');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {countries.map((country) => (
+                        <SelectItem key={country.value} value={country.value}>
+                          {country.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {country === 'us' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Select 
+                      value={state} 
+                      onValueChange={setState}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select your state" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {usStates.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>

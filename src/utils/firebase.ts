@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion } from 'firebase/firestore';
@@ -12,7 +11,10 @@ export interface UserProfile {
   username?: string;
   email?: string;
   gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
-  location?: GeoPoint;
+  location?: {
+    country: string;
+    state?: string | null;
+  };
   role?: 'admin' | 'member';
   joinedAt?: Timestamp;
   streakDays?: number;
@@ -98,7 +100,15 @@ export const login = async (email: string, password: string) => {
   }
 };
 
-export const register = async (email: string, password: string, username: string, firstName: string, lastName: string, gender: string, location?: { lat: number, lng: number }) => {
+export const register = async (
+  email: string, 
+  password: string, 
+  username: string, 
+  firstName: string, 
+  lastName: string, 
+  gender: string, 
+  location?: { country: string; state?: string | null }
+) => {
   try {
     console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -112,7 +122,7 @@ export const register = async (email: string, password: string, username: string
       meditations: [],
       relapses: [],  
       gender,
-      location: location ? new GeoPoint(location.lat, location.lng) : null,
+      location: location || null,
       role: 'member', // Default role
       joinedAt: Timestamp.now(),
       streakDays: 0,
@@ -276,7 +286,6 @@ interface LogRelapseResult {
   message?: string;
 }
 
-
 export const logRelapse = async (userId: string, triggers: string, notes?: string): Promise<LogRelapseResult> => {
   try {
     const userDocRef = doc(db, 'users', userId);  // Reference to the user's document
@@ -297,61 +306,17 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
   }
 };
 
-// Get user triggers from the last 7 days
-// export const getUserTriggers = async (userId: string): Promise<{ name: string; count: number; }[]> => {
-//   try {
-//     const sevenDaysAgo = new Date();
-//     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-//     const relapsesRef = collection(db, 'relapses');
-//     const q = query(
-//       relapsesRef,
-//       where('userId', '==', userId),
-//       where('timestamp', '>=', Timestamp.fromDate(sevenDaysAgo)),
-//       orderBy('timestamp', 'desc')
-//     );
-    
-//     const querySnapshot = await getDocs(q);
-    
-//     // Count the triggers
-//     const triggerCounts: Record<string, number> = {};
-    
-//     querySnapshot.forEach((doc) => {
-//       const data = doc.data();
-//       if (data.triggers && Array.isArray(data.triggers)) {
-//         data.triggers.forEach(trigger => {
-//           triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
-//         });
-//       }
-//     });
-    
-//     // Convert to array format for chart
-//     const triggers = Object.entries(triggerCounts).map(([name, count]) => ({
-//       name,
-//       count
-//     }));
-    
-//     // Sort by count (descending)
-//     triggers.sort((a, b) => b.count - a.count);
-    
-//     return triggers;
-//   } catch (error) {
-//     console.error('Error fetching user triggers:', error);
-//     return [];
-//   }
-// };
-
 // Community map data (anonymized)
 export const getCommunityLocations = async () => {
   try {
     const usersRef = collection(db, 'users');
     const querySnapshot = await getDocs(usersRef);
     
-    const locations: { id: string; location: GeoPoint }[] = [];
+    const locations: { id: string; location: { country: string; state?: string | null; } }[] = [];
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.location) {
+      if (data.location && data.location.country) {
         // Only include location data, not user identifiable information
         locations.push({
           id: doc.id,
