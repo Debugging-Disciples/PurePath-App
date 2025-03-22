@@ -1,9 +1,10 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/auth";
 import { logout } from "../utils/firebase";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, ShieldCheck } from "lucide-react";
 import { db } from "../utils/firebase";
 import { collection, where, query, getDocs } from "firebase/firestore";
 import {
@@ -18,7 +19,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar: React.FC = () => {
   const [userInitials, setUserInitials] = useState("U");
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -86,6 +87,17 @@ const Navbar: React.FC = () => {
       </Link>
   
       <nav className="flex items-center space-x-4">
+        {/* Admin Link - Only visible to admins */}
+        {isAdmin && (
+          <Link 
+            to="/admin" 
+            className="flex items-center text-sm text-foreground hover:text-primary transition-colors"
+          >
+            <ShieldCheck className="h-4 w-4 mr-1" />
+            Admin
+          </Link>
+        )}
+        
         {/* Dark Mode Button */}
         <Button
           variant="ghost"
