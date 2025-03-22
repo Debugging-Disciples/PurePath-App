@@ -36,7 +36,6 @@ const Dashboard: React.FC = () => {
   const [lastCheckIn, setLastCheckIn] = useState<Date | null>(null);
   const [isCheckedInToday, setIsCheckedInToday] = useState(false);
   
-  // Simulate featured meditations
   const featuredMeditations = [
     {
       id: '1',
@@ -44,6 +43,7 @@ const Dashboard: React.FC = () => {
       description: 'Learn to ride the wave of desire without giving in',
       duration: 10,
       category: 'Beginner',
+      favorite: false,
       imageUrl: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&q=80&w=500'
     },
     {
@@ -52,6 +52,7 @@ const Dashboard: React.FC = () => {
       description: 'Start your day with purpose and clear intentions',
       duration: 5,
       category: 'Daily',
+      favorite: false,
       imageUrl: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&q=80&w=500'
     }
   ];
@@ -60,7 +61,6 @@ const Dashboard: React.FC = () => {
     if (currentUser && userProfile) {
       setStreak(userProfile.streakDays || 0);
       
-      // Check if the user has checked in today
       if (userProfile.lastCheckIn) {
         const lastCheckInDate = userProfile.lastCheckIn.toDate();
         setLastCheckIn(lastCheckInDate);
@@ -82,7 +82,6 @@ const Dashboard: React.FC = () => {
       const result = await updateStreak(currentUser.uid);
       
       if (result.success) {
-        // Refresh user data
         const updatedProfile = await getUserProfile(currentUser.uid);
         
         if (updatedProfile) {
@@ -109,8 +108,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  
-  
   return (
     <motion.div 
       className="container py-8 pb-16"
@@ -138,7 +135,6 @@ const Dashboard: React.FC = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Streak Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -185,7 +181,6 @@ const Dashboard: React.FC = () => {
           </Card>
         </motion.div>
         
-        {/* Quick Links Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -239,7 +234,6 @@ const Dashboard: React.FC = () => {
           </Card>
         </motion.div>
         
-        {/* Panic Button Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
