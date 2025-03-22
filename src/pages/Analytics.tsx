@@ -62,50 +62,6 @@ const mockMoodData = [
   { date: "Jan 13", streak: 4, mood: 8 },
   { date: "Jan 14", streak: 5, mood: 9 },
 ];
-// Fetch triggers from Firebase
-const useTriggers = (uid: string | undefined) => {
-  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
-    []
-  );
-
-  useEffect(() => {
-    if (!uid) return;
-
-    const fetchTriggers = async () => {
-      try {
-        const userDocRef = doc(collection(db, "users"), uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const relapses = userDoc.data().relapses || [];
-          const triggerCounts: Record<string, number> = {};
-
-          relapses.forEach((relapse: { triggers: string }) => {
-            const trigger = relapse.triggers;
-            if (trigger) {
-              triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
-            }
-          });
-
-          const formattedTriggers = Object.entries(triggerCounts).map(
-            ([name, count]) => ({
-              name,
-              count,
-            })
-          );
-
-          setTriggers(formattedTriggers);
-        }
-      } catch (error) {
-        console.error("Error fetching triggers:", error);
-      }
-    };
-
-    fetchTriggers();
-  }, [uid]);
-
-  return triggers;
-};
 
 // Usage
 
