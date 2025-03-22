@@ -64,7 +64,7 @@ const mockTriggers = [
 const Analytics: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [notes, setNotes] = useState("");
-  const [selectedTriggers, setSelectedTriggers] = React.useState<string[]>([])
+  const [selectedTriggers, setSelectedTriggers] = React.useState<string[] | undefined >(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRelapseSubmit = async () => {
@@ -340,7 +340,7 @@ const Analytics: React.FC = () => {
                   <Label htmlFor="trigger">What triggered this relapse?</Label>
 
                   <Select
-                    value={selectedTriggers as string[]}
+                    value= {selectedTriggers as string[]}
                     onValueChange={(newValue) => {
                       setSelectedTriggers((prevTriggers) => {
                         if (Array.isArray(newValue)) {
@@ -359,7 +359,7 @@ const Analytics: React.FC = () => {
                         }
                       });
                     }}
-                    props: multiple
+                    multiple
                   >
                     <SelectTrigger id="trigger">
                       <SelectValue placeholder="Select triggers" />
