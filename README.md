@@ -30,6 +30,16 @@ This project is built with modern web technologies:
 - 🌍 **Global Community**: Connect with others on the same journey
 
 
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
 
 ## Getting Started
 
@@ -74,6 +84,7 @@ This project is built with modern web technologies:
 
    You can use the `.env.sample` file as a template.
 **Note: Enable email/pwd authentication in your firebase console.**
+
 
 6. Start the development server:
    ```bash
@@ -121,13 +132,3 @@ This application uses Firebase Authentication for user management. Users can:
 - Log in with existing credentials
 - Access protected routes (dashboard, profile, etc.)
 - Admin users have access to additional 
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
