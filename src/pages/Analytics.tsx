@@ -10,6 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import ProgressChart from "@/components/ProgressChart";
 import { logRelapse } from "../utils/firebase";
@@ -20,7 +27,6 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 import { db } from "../utils/firebase";
 import { collection, doc, getDoc } from "firebase/firestore";
-import { MultiSelect } from "@/components/ui/multi-select";
 
 const mockStreakData = [
   { date: "Jan 1", streak: 1 },
@@ -59,20 +65,11 @@ const mockMoodData = [
 const Analytics: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
   const [notes, setNotes] = useState("");
-  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
+  const [selectedTrigger, setSelectedTrigger] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
     []
   );
-
-  const triggerOptions = [
-    { value: "stress", label: "Stress" },
-    { value: "boredom", label: "Boredom" },
-    { value: "loneliness", label: "Loneliness" },
-    { value: "fatigue", label: "Fatigue" },
-    { value: "social-media", label: "Social Media" },
-    { value: "other", label: "Other" }
-  ];
 
   const useTriggers = (uid: string | undefined) => {
     useEffect(() => {
@@ -120,7 +117,7 @@ const Analytics: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await logRelapse(currentUser.uid, selectedTriggers, notes);
+      const result = await logRelapse(currentUser.uid, selectedTrigger, notes);
       if (result.success) {
         toast.success("Progress reset", {
           description:
@@ -128,7 +125,7 @@ const Analytics: React.FC = () => {
         });
 
         setNotes("");
-        setSelectedTriggers([]);
+        setSelectedTrigger("");
       } else {
         toast.error("Failed to log relapse", {
           description: result.message,
@@ -392,14 +389,23 @@ const Analytics: React.FC = () => {
 
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="trigger">What triggered this relapse? (Select up to 3)</Label>
-                  <MultiSelect
-                    options={triggerOptions}
-                    selected={selectedTriggers}
-                    onChange={setSelectedTriggers}
-                    placeholder="Select triggers"
-                    className="w-full"
-                  />
+                  <Label htmlFor="trigger">What triggered this relapse?</Label>
+                  <Select
+                    value={selectedTrigger}
+                    onValueChange={setSelectedTrigger}
+                  >
+                    <SelectTrigger id="trigger">
+                      <SelectValue placeholder="Select a trigger" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="stress">Stress</SelectItem>
+                      <SelectItem value="boredom">Boredom</SelectItem>
+                      <SelectItem value="loneliness">Loneliness</SelectItem>
+                      <SelectItem value="fatigue">Fatigue</SelectItem>
+                      <SelectItem value="social-media">Social Media</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -418,7 +424,7 @@ const Analytics: React.FC = () => {
                   variant="destructive"
                   className="w-full"
                   onClick={handleRelapseSubmit}
-                  disabled={isSubmitting || selectedTriggers.length === 0}
+                  disabled={isSubmitting || !selectedTrigger}
                 >
                   {isSubmitting
                     ? "Submitting..."
