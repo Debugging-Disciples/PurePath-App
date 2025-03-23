@@ -1,32 +1,91 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { motion } from 'framer-motion';
-import { Send, Users, MessageCircle } from 'lucide-react';
+import { Send, Users, MessageCircle, Plus, MoreVertical, Smile, Reply, Check } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
-import {db, UserProfile } from '../utils/firebase';
+import { db, UserProfile } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
+import { 
+  ChatMessage, 
+  ChatRoom, 
+  initializeDefaultChatRooms, 
+  getAvailableRooms, 
+  getRoomMessages, 
+  sendMessage, 
+  addReaction, 
+  removeReaction,
+  createGroupChat
+} from '../utils/chatService';
+import { Timestamp } from 'firebase/firestore';
+import { toast } from 'sonner';
 
-// Mock data for messages
-const MOCK_MESSAGES = [
-  { id: '1', userId: '2', text: 'I just wanted to share that I hit 30 days today! It\'s been tough but so worth it.', timestamp: new Date(Date.now() - 60 * 60 * 1000) },
-  { id: '2', userId: '1', text: 'Congratulations Michael! That\'s a huge milestone. What helped you the most?', timestamp: new Date(Date.now() - 55 * 60 * 1000) },
-  { id: '3', userId: '2', text: 'Honestly, the daily meditations and checking in with this community. Having accountability made all the difference.', timestamp: new Date(Date.now() - 50 * 60 * 1000) },
-  { id: '4', userId: '3', text: 'I remember struggling at the 30-day mark. Push through, it gets easier!', timestamp: new Date(Date.now() - 45 * 60 * 1000) }
-];
+// Common emoji reactions
+const COMMON_EMOJIS = ['👍', '❤️', '😊', '🙏', '✨', '💪', '🔥'];
 
 const Community: React.FC = () => {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const { currentUser } = useAuth();
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [newRoomName, setNewRoomName] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { currentUser, userProfile } = useAuth();
   
+  // Initialize default chat rooms and fetch available rooms
+  useEffect(() => {
+    const setupChatRooms = async () => {
+      if (!currentUser) return;
+      
+      try {
+        await initializeDefaultChatRooms();
+        const rooms = await getAvailableRooms(currentUser.uid, userProfile?.gender);
+        setChatRooms(rooms);
+        
+        // Select main chat by default
+        const mainRoom = rooms.find(room => room.id === 'main');
+        if (mainRoom) {
+          setSelectedRoom(mainRoom);
+        } else if (rooms.length > 0) {
+          setSelectedRoom(rooms[0]);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Error setting up chat rooms:", error);
+        setLoading(false);
+      }
+    };
+    
+    setupChatRooms();
+  }, [currentUser, userProfile?.gender]);
+  
+  // Fetch users for displaying names and avatars
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -44,29 +103,109 @@ const Community: React.FC = () => {
         setUsers(usersList);
       } catch (error) {
         console.error('Error fetching users:', error);
-      } finally {
-        setLoading(false);
       }
     };
     
     fetchUsers();
   }, []);
   
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Fetch messages for selected room
+  useEffect(() => {
+    if (!selectedRoom) return;
     
-    if (!message.trim()) return;
+    setMessagesLoading(true);
     
-    // Adding a new mock message
-    const newMessage = {
-      id: Date.now().toString(),
-      userId: currentUser?.uid || '1', // Use current user's ID if available
-      text: message,
-      timestamp: new Date()
+    const fetchMessages = async () => {
+      try {
+        await getRoomMessages(selectedRoom.id)
+          .then((fetchedMessages) => {
+            setMessages(fetchedMessages);
+            setMessagesLoading(false);
+          })
+          .catch((error) => {
+            console.error(`Error fetching messages for room ${selectedRoom.id}:`, error);
+            setMessagesLoading(false);
+          });
+      } catch (error) {
+        console.error("Error in fetchMessages:", error);
+        setMessagesLoading(false);
+      }
     };
     
-    setMessages([...messages, newMessage]);
-    setMessage('');
+    fetchMessages();
+  }, [selectedRoom]);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+  
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!message.trim() || !selectedRoom || !currentUser) return;
+    
+    try {
+      const replyToId = replyingTo?.id;
+      const replyToText = replyingTo?.text;
+      
+      const success = await sendMessage(
+        selectedRoom.id, 
+        message, 
+        currentUser.uid,
+        replyToId,
+        replyToText
+      );
+      
+      if (success) {
+        setMessage('');
+        setReplyingTo(null);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    }
+  };
+  
+  const handleCreateRoom = async () => {
+    if (!newRoomName.trim() || !currentUser) return;
+    
+    try {
+      const roomId = await createGroupChat(newRoomName, currentUser.uid);
+      
+      if (roomId) {
+        setNewRoomName('');
+        // Refresh room list
+        const rooms = await getAvailableRooms(currentUser.uid, userProfile?.gender);
+        setChatRooms(rooms);
+        
+        // Select the newly created room
+        const newRoom = rooms.find(room => room.id === roomId);
+        if (newRoom) {
+          setSelectedRoom(newRoom);
+        }
+      }
+    } catch (error) {
+      console.error("Error creating room:", error);
+      toast.error("Failed to create chat room");
+    }
+  };
+  
+  const handleReaction = async (message: ChatMessage, emoji: string) => {
+    if (!currentUser || !selectedRoom) return;
+    
+    const messageReactions = message.reactions || {};
+    const hasReacted = messageReactions[emoji]?.includes(currentUser.uid);
+    
+    try {
+      if (hasReacted) {
+        await removeReaction(selectedRoom.id, message.id, emoji, currentUser.uid);
+      } else {
+        await addReaction(selectedRoom.id, message.id, emoji, currentUser.uid);
+      }
+    } catch (error) {
+      console.error("Error handling reaction:", error);
+    }
   };
   
   const formatTimeAgo = (date: Date) => {
@@ -101,6 +240,28 @@ const Community: React.FC = () => {
     } else {
       return 'U';
     }
+  };
+  
+  // Render message reactions
+  const renderReactions = (message: ChatMessage) => {
+    if (!message.reactions || Object.keys(message.reactions).length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        {Object.entries(message.reactions).map(([emoji, userIds]) => (
+          <Badge 
+            key={emoji} 
+            variant={userIds.includes(currentUser?.uid || '') ? "default" : "outline"}
+            className="cursor-pointer"
+            onClick={() => handleReaction(message, emoji)}
+          >
+            {emoji} {userIds.length}
+          </Badge>
+        ))}
+      </div>
+    );
   };
   
   return (
@@ -140,77 +301,254 @@ const Community: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Card className="mb-6">
-              <CardHeader className="pb-3">
-                <CardTitle>Community Chat</CardTitle>
-                <CardDescription>
-                  A safe space to share experiences and support each other
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="h-[60vh] overflow-y-auto space-y-4 p-2">
-                  {messages.map((msg, index) => {
-                    const isCurrentUser = msg.userId === currentUser?.uid;
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Chat rooms sidebar */}
+              <div className="md:col-span-1">
+                <Card className="h-full">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Chat Rooms</CardTitle>
+                      <CardDescription>
+                        Join conversations
+                      </CardDescription>
+                    </div>
                     
-                    return (
-                      <motion.div
-                        key={msg.id}
-                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                      >
-                        <div className={`flex max-w-[80%] ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <Avatar className={`h-8 w-8 ${isCurrentUser ? 'ml-2' : 'mr-2'}`}>
-                            <AvatarImage src="" />
-                            <AvatarFallback>{getUserInitials(msg.userId)}</AvatarFallback>
-                          </Avatar>
-                          
-                          <div className={`space-y-1 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-sm font-medium">{getUserDisplayName(msg.userId)}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatTimeAgo(msg.timestamp)}
-                              </span>
-                            </div>
-                            
-                            <div className={`rounded-lg px-4 py-2 ${
-                              isCurrentUser 
-                                ? 'bg-primary text-primary-foreground' 
-                                : 'bg-secondary'
-                            }`}>
-                              {msg.text}
-                            </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Create New Chat Room</DialogTitle>
+                          <DialogDescription>
+                            Create a new group chat with other community members.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Chat room name"
+                              value={newRoomName}
+                              onChange={(e) => setNewRoomName(e.target.value)}
+                            />
                           </div>
                         </div>
-                      </motion.div>
-                    );
-                  })}
+                        <DialogFooter>
+                          <Button onClick={handleCreateRoom}>Create Room</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    {loading ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin h-6 w-6 border-2 border-primary rounded-full border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
+                        {chatRooms.map((room) => (
+                          <div
+                            key={room.id}
+                            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                              selectedRoom?.id === room.id 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'hover:bg-muted'
+                            }`}
+                            onClick={() => setSelectedRoom(room)}
+                          >
+                            <div className="flex-1 truncate">
+                              <div className="font-medium">{room.name}</div>
+                              {room.lastMessage && (
+                                <div className="text-xs truncate opacity-80">
+                                  {getUserDisplayName(room.lastMessage.senderId)}: {room.lastMessage.text}
+                                </div>
+                              )}
+                            </div>
+                            {room.type === 'men' && <Badge variant="outline">👨 Men</Badge>}
+                            {room.type === 'women' && <Badge variant="outline">👩 Women</Badge>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Chat messages */}
+              <div className="md:col-span-3">
+                <Card className="mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle>{selectedRoom?.name || 'Select a chat room'}</CardTitle>
+                    <CardDescription>
+                      A safe space to share experiences and support each other
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    {!selectedRoom ? (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground">Select a chat room to start messaging</p>
+                      </div>
+                    ) : messagesLoading ? (
+                      <div className="flex justify-center py-12">
+                        <div className="animate-spin h-6 w-6 border-2 border-primary rounded-full border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <div className="h-[60vh] overflow-y-auto space-y-4 p-2">
+                        {messages.length === 0 ? (
+                          <div className="text-center py-12">
+                            <p className="text-muted-foreground">No messages yet. Be the first to say hello!</p>
+                          </div>
+                        ) : (
+                          messages.map((msg, index) => {
+                            const isCurrentUser = msg.senderId === currentUser?.uid;
+                            
+                            return (
+                              <motion.div
+                                key={msg.id}
+                                className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                              >
+                                <div className={`flex max-w-[80%] ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                                  <Avatar className={`h-8 w-8 ${isCurrentUser ? 'ml-2' : 'mr-2'}`}>
+                                    <AvatarImage src="" />
+                                    <AvatarFallback>{getUserInitials(msg.senderId)}</AvatarFallback>
+                                  </Avatar>
+                                  
+                                  <div className={`space-y-1 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                                    <div className="flex items-baseline gap-2">
+                                      <span className="text-sm font-medium">{getUserDisplayName(msg.senderId)}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatTimeAgo(msg.timestamp.toDate())}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Reply reference */}
+                                    {msg.replyTo && (
+                                      <div className={`text-xs rounded px-3 py-1 border-l-2 border-primary ${
+                                        isCurrentUser 
+                                          ? 'bg-muted/50 text-foreground mr-auto' 
+                                          : 'bg-muted/30 text-foreground ml-auto'
+                                      }`}>
+                                        <span className="font-medium">
+                                          {getUserDisplayName(messages.find(m => m.id === msg.replyTo)?.senderId || '')}:
+                                        </span> {msg.replyToText}
+                                      </div>
+                                    )}
+                                    
+                                    <div className={`relative rounded-lg px-4 py-2 group ${
+                                      isCurrentUser 
+                                        ? 'bg-primary text-primary-foreground' 
+                                        : 'bg-secondary'
+                                    }`}>
+                                      {msg.text}
+                                      
+                                      {/* Message actions */}
+                                      <div className={`absolute ${isCurrentUser ? 'left-0' : 'right-0'} -translate-y-1/2 top-1/2 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                                        <div className={`${isCurrentUser ? '-translate-x-full mr-2' : 'translate-x-full ml-2'} flex items-center gap-1 bg-background shadow-sm rounded-full p-1`}>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                                <Smile className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align={isCurrentUser ? "start" : "end"}>
+                                              <div className="flex flex-wrap p-2 gap-2">
+                                                {COMMON_EMOJIS.map(emoji => (
+                                                  <div 
+                                                    key={emoji}
+                                                    className="cursor-pointer p-1 hover:bg-muted rounded"
+                                                    onClick={() => handleReaction(msg, emoji)}
+                                                  >
+                                                    {emoji}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                          
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-7 w-7"
+                                            onClick={() => setReplyingTo(msg)}
+                                          >
+                                            <Reply className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Reactions */}
+                                    {renderReactions(msg)}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })
+                        )}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    )}
+                  </CardContent>
+                  
+                  {selectedRoom && (
+                    <CardFooter>
+                      {replyingTo && (
+                        <div className="w-full mb-2 flex items-center justify-between bg-muted/50 p-2 rounded-md">
+                          <div className="flex-1 truncate">
+                            <span className="text-xs font-medium">
+                              Replying to {getUserDisplayName(replyingTo.senderId)}:
+                            </span>
+                            <p className="text-xs truncate">{replyingTo.text}</p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6"
+                            onClick={() => setReplyingTo(null)}
+                          >
+                            <Check className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <form onSubmit={handleSendMessage} className="w-full flex gap-2">
+                        <Textarea
+                          placeholder="Type a message..."
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          className="min-h-[40px] flex-1 resize-none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage(e);
+                            }
+                          }}
+                        />
+                        <Button type="submit" size="icon">
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    </CardFooter>
+                  )}
+                </Card>
+                
+                <div className="bg-muted/30 p-4 rounded-lg text-sm text-muted-foreground">
+                  <p className="font-medium mb-1">Community Guidelines</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Be respectful and supportive of all members</li>
+                    <li>Share your experiences but avoid graphic details</li>
+                    <li>Respect everyone's privacy</li>
+                    <li>Report any inappropriate content to moderators</li>
+                  </ul>
                 </div>
-              </CardContent>
-              <CardFooter>
-                <form onSubmit={handleSendMessage} className="w-full flex gap-2">
-                  <Input
-                    placeholder="Type a message..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button type="submit" size="icon">
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
-              </CardFooter>
-            </Card>
-            
-            <div className="bg-muted/30 p-4 rounded-lg text-sm text-muted-foreground">
-              <p className="font-medium mb-1">Community Guidelines</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Be respectful and supportive of all members</li>
-                <li>Share your experiences but avoid graphic details</li>
-                <li>Respect everyone's privacy</li>
-                <li>Report any inappropriate content to moderators</li>
-              </ul>
+              </div>
             </div>
           </motion.div>
         </TabsContent>
@@ -259,11 +597,6 @@ const Community: React.FC = () => {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardFooter className="pt-2">
-                        <Button variant="ghost" size="sm" className="w-full">
-                          Message
-                        </Button>
-                      </CardFooter>
                     </Card>
                   </motion.div>
                 ))}
