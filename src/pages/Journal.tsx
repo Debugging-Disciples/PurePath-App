@@ -161,8 +161,8 @@ const Journal: React.FC = () => {
             <ArrowLeft className="h-6 w-6" />
           </Button>
           
-          <div className={`text-xl font-medium ${moodColorClass}`}>
-            {step === 1 ? 'How are you feeling?' : step === 2 ? 'Select emotions' : 'Write in journal'}
+          <div className={`text-xl font-medium ml-10 ${moodColorClass}`}>
+            {step === 1 ? 'How are you feeling?' : step === 2 ? 'Select Emotions' : 'Write in Journal'}
           </div>
           
           <Button 
@@ -190,13 +190,13 @@ const Journal: React.FC = () => {
             className="space-y-8"
           >
             <div className="text-center">
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold  text-white mb-2">
                 Choose how you're feeling
               </h1>
               <p className="text-white/80">right now</p>
             </div>
             
-            <div className="flex flex-col items-center justify-center py-10">
+            <div className="flex flex-col items-center justify-center py-2">
               <div className="relative w-48 h-48 flex items-center justify-center mb-6">
                 <div className={`absolute inset-0 rounded-full blur-lg bg-${moodScore > 5 ? 'green' : 'blue'}-400 opacity-20`}></div>
                 <div className={`w-36 h-36 rounded-full ${moodScore > 5 ? 'bg-green-400/30' : 'bg-blue-400/30'} flex items-center justify-center`}>
