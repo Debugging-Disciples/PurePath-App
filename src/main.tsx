@@ -1,7 +1,13 @@
 
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { inject } from '@vercel/analytics';
 import './index.css'
+import { injectSpeedInsights } from '@vercel/speed-insights';
+ 
+injectSpeedInsights();
+//analytics
+inject();
 
 // Add more detailed logging
 console.log("Main component starting initialization");
