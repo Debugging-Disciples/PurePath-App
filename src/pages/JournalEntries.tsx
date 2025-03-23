@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -46,7 +45,6 @@ import { useAuth } from '../utils/auth';
 import { getJournalEntries, JournalEntry } from '../utils/firebase';
 import { toast } from 'sonner';
 
-// Get mood label based on score
 const getMoodLabel = (score: number): string => {
   if (score <= 2) return "Very Unpleasant";
   if (score <= 4) return "Slightly Unpleasant";
@@ -55,7 +53,6 @@ const getMoodLabel = (score: number): string => {
   return "Very Pleasant";
 };
 
-// Get mood color based on score
 const getMoodColor = (score: number): string => {
   if (score <= 4) return "text-blue-400";
   if (score <= 6) return "text-slate-200";
@@ -93,9 +90,8 @@ const JournalEntries: React.FC = () => {
         setEntries(fetchedEntries);
         setFilteredEntries(fetchedEntries);
         
-        // Set default selected month to the most recent entry's month if entries exist
         if (fetchedEntries.length > 0) {
-          const latestEntry = fetchedEntries[0]; // Already sorted in getJournalEntries
+          const latestEntry = fetchedEntries[0];
           const latestMonth = format(latestEntry.timestamp, 'MMMM yyyy');
           setSelectedMonth(latestMonth);
         }
@@ -110,11 +106,9 @@ const JournalEntries: React.FC = () => {
     fetchEntries();
   }, [currentUser, navigate]);
 
-  // Filter entries based on search query and selected month
   useEffect(() => {
     let filtered = entries;
     
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
         entry => 
@@ -124,7 +118,6 @@ const JournalEntries: React.FC = () => {
       );
     }
     
-    // Filter by selected month
     if (selectedMonth) {
       filtered = filtered.filter(entry => 
         format(entry.timestamp, 'MMMM yyyy') === selectedMonth
@@ -132,10 +125,9 @@ const JournalEntries: React.FC = () => {
     }
     
     setFilteredEntries(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, [searchQuery, selectedMonth, entries]);
 
-  // Get unique months from entries
   const months = React.useMemo(() => {
     const uniqueMonths = new Set<string>();
     entries.forEach(entry => {
@@ -145,25 +137,21 @@ const JournalEntries: React.FC = () => {
     return Array.from(uniqueMonths).sort((a, b) => {
       const dateA = new Date(a);
       const dateB = new Date(b);
-      return dateB.getTime() - dateA.getTime(); // Sort in descending order
+      return dateB.getTime() - dateA.getTime();
     });
   }, [entries]);
 
-  // Calculate statistics
   const stats = React.useMemo(() => {
-    // Get entries for the current year
     const currentYear = new Date().getFullYear();
     const entriesThisYear = entries.filter(
       entry => entry.timestamp.getFullYear() === currentYear
     );
     
-    // Count total words written
     const totalWords = entriesThisYear.reduce((sum, entry) => {
       const wordCount = entry.notes.split(/\s+/).filter(Boolean).length;
       return sum + wordCount;
     }, 0);
     
-    // Count unique days journaled
     const uniqueDays = new Set(
       entriesThisYear.map(entry => format(entry.timestamp, 'yyyy-MM-dd'))
     ).size;
@@ -175,16 +163,13 @@ const JournalEntries: React.FC = () => {
     };
   }, [entries]);
 
-  // Pagination
   const indexOfLastEntry = currentPage * entriesPerPage;
   const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
   const currentEntries = filteredEntries.slice(indexOfFirstEntry, indexOfLastEntry);
   const totalPages = Math.ceil(filteredEntries.length / entriesPerPage);
 
-  // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  // Grouped entries by date
   const groupedEntries = React.useMemo(() => {
     const groups: Record<string, JournalEntry[]> = {};
     
@@ -225,7 +210,6 @@ const JournalEntries: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <Card className="bg-slate-800 border-none">
             <CardContent className="flex items-center p-4">
@@ -264,7 +248,6 @@ const JournalEntries: React.FC = () => {
           </Card>
         </div>
 
-        {/* Search and filter */}
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -277,7 +260,6 @@ const JournalEntries: React.FC = () => {
           </div>
         </div>
 
-        {/* Month tabs */}
         <Tabs defaultValue={selectedMonth || months[0]} className="mb-6">
           <TabsList className="bg-slate-800 w-full h-auto flex overflow-x-auto p-1">
             {months.map(month => (
@@ -314,7 +296,6 @@ const JournalEntries: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Journal entries */}
             <div className="space-y-6">
               {Object.entries(groupedEntries).map(([date, entriesForDate]) => (
                 <div key={date} className="space-y-4">
@@ -359,14 +340,13 @@ const JournalEntries: React.FC = () => {
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <Pagination className="mt-8">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious 
                       onClick={() => paginate(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
+                      isDisabled={currentPage === 1}
                       className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
@@ -378,7 +358,6 @@ const JournalEntries: React.FC = () => {
                       (page >= currentPage - 1 && page <= currentPage + 1)
                     )
                     .map((page, index, array) => {
-                      // Add ellipsis
                       if (index > 0 && page > array[index - 1] + 1) {
                         return (
                           <React.Fragment key={`ellipsis-${page}`}>
@@ -412,7 +391,7 @@ const JournalEntries: React.FC = () => {
                   <PaginationItem>
                     <PaginationNext 
                       onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
+                      isDisabled={currentPage === totalPages}
                       className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
