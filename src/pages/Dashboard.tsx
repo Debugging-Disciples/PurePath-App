@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -9,8 +10,8 @@ import {
   Trophy, 
   TrendingUp,
   MessageCircle,
-  Map,
-  HeartPulse
+  HeartPulse,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -204,19 +205,19 @@ const Dashboard: React.FC = () => {
                 </Link>
               </Button>
               <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/community">
+                <Link to="/journal">
                   <div className="flex items-center">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    <span>Community Chat</span>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    <span>Journal</span>
                   </div>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/map">
+                <Link to="/community">
                   <div className="flex items-center">
-                    <Map className="mr-2 h-4 w-4" />
-                    <span>Community Map</span>
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    <span>Community Chat</span>
                   </div>
                   <ArrowRight className="h-4 w-4" />
                 </Link>

@@ -1,4 +1,5 @@
 
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import Profile from "./pages/Profile";
 import Goodbye from "./pages/Goodbye";
+import Journal from "./pages/Journal";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +90,14 @@ const App = () => (
                   element={
                     <AuthWrapper requireAuth>
                       <Map />
+                    </AuthWrapper>
+                  }
+                />
+                <Route
+                  path="/journal"
+                  element={
+                    <AuthWrapper requireAuth>
+                      <Journal />
                     </AuthWrapper>
                   }
                 />

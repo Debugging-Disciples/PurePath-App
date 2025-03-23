@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 // Define user profile interface
@@ -27,6 +27,17 @@ export interface UserProfile {
       url: string;
     };
   };
+}
+
+// Journal entry interface
+export interface JournalEntry {
+  id?: string;
+  userId: string;
+  timestamp: Date;
+  question: string;    // The prompt that was shown
+  notes: string;       // User's journal response
+  level: number;       // Mood level (1-10)
+  emotions: string[];  // Selected emotions
 }
 
 // Firebase configuration with provided credentials
@@ -303,6 +314,65 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
   } catch (error) {
     console.error('Error logging relapse:', error);
     return { success: false, message: error.message };
+  }
+};
+
+// Journal functions
+export const addJournalEntry = async (entry: JournalEntry): Promise<boolean> => {
+  if (!db || !entry.userId) {
+    console.error("Firebase db not initialized or missing userId");
+    return false;
+  }
+  
+  try {
+    const userRef = doc(db, 'users', entry.userId);
+    
+    // Convert JS Date to Firestore Timestamp
+    const entryWithTimestamp = {
+      ...entry,
+      timestamp: Timestamp.fromDate(entry.timestamp)
+    };
+    
+    // Add to journal array in user document
+    await updateDoc(userRef, {
+      journal: arrayUnion(entryWithTimestamp)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error adding journal entry:', error);
+    return false;
+  }
+};
+
+export const getJournalEntries = async (userId: string): Promise<JournalEntry[]> => {
+  if (!db) {
+    console.error("Firebase db not initialized");
+    return [];
+  }
+  
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists() && userDoc.data().journal) {
+      const entries = userDoc.data().journal;
+      
+      // Convert Firestore data to our interface format and sort by date
+      return entries
+        .map((entry: any) => ({
+          ...entry,
+          timestamp: entry.timestamp.toDate() // Convert Timestamp to JS Date
+        }))
+        .sort((a: JournalEntry, b: JournalEntry) => 
+          b.timestamp.getTime() - a.timestamp.getTime()
+        );
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error getting journal entries:', error);
+    return [];
   }
 };
 
