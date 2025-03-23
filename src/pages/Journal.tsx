@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -311,7 +312,7 @@ const Journal: React.FC = () => {
           <Button 
             variant="outline" 
             onClick={() => navigate('/journal-entries')}
-            className="w-full py-6 text-white border-white/20 hover:bg-white/10"
+            className="w-full py-6 text-black dark:text-white border-white/20 hover:bg-white/10"
           >
             <BookOpen className="mr-2 h-5 w-5" />
             Show Past Entries

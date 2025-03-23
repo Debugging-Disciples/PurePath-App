@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -44,6 +45,7 @@ import {
 import { useAuth } from '../utils/auth';
 import { getJournalEntries, JournalEntry } from '../utils/firebase';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
 
 const getMoodLabel = (score: number): string => {
   if (score <= 2) return "Very Unpleasant";
@@ -54,15 +56,15 @@ const getMoodLabel = (score: number): string => {
 };
 
 const getMoodColor = (score: number): string => {
-  if (score <= 4) return "text-blue-400";
-  if (score <= 6) return "text-slate-200";
-  return "text-green-400";
+  if (score <= 4) return "text-blue-600 dark:text-blue-400";
+  if (score <= 6) return "text-slate-600 dark:text-slate-200";
+  return "text-green-600 dark:text-green-400";
 };
 
 const getMoodBgColor = (score: number): string => {
-  if (score <= 4) return "bg-blue-400/20";
-  if (score <= 6) return "bg-slate-400/20";
-  return "bg-green-400/20";
+  if (score <= 4) return "bg-blue-100 dark:bg-blue-400/20";
+  if (score <= 6) return "bg-slate-100 dark:bg-slate-400/20";
+  return "bg-green-100 dark:bg-green-400/20";
 };
 
 const JournalEntries: React.FC = () => {
@@ -74,7 +76,25 @@ const JournalEntries: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const entriesPerPage = 10;
+
+  useEffect(() => {
+    // Check system preference for dark mode
+    if (document.documentElement.classList.contains('dark')) {
+      setIsDarkMode(true);
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -185,7 +205,7 @@ const JournalEntries: React.FC = () => {
   }, [currentEntries]);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-800 dark:text-white">
       <div className="container py-8 px-4 mx-auto max-w-4xl">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3">
@@ -193,14 +213,18 @@ const JournalEntries: React.FC = () => {
               variant="ghost" 
               size="icon"
               onClick={() => navigate('/journal')}
-              className="text-white"
+              className="text-slate-800 dark:text-white"
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
-            <h1 className="text-4xl font-bold tracking-tight">Journal</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-800 dark:text-white">Journal</h1>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="flex items-center space-x-2 mr-2">
+              <span className="text-sm">{isDarkMode ? 'Dark' : 'Light'}</span>
+              <Switch checked={isDarkMode} onCheckedChange={toggleDarkMode} />
+            </div>
             <Button variant="outline" size="icon" className="rounded-full">
               <Search className="h-5 w-5" />
             </Button>
@@ -211,38 +235,38 @@ const JournalEntries: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <Card className="bg-slate-800 border-none">
+          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-none">
             <CardContent className="flex items-center p-4">
-              <div className="rounded-full bg-blue-900/30 p-2 mr-4">
-                <BookOpen className="h-6 w-6 text-blue-400" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-2 mr-4">
+                <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="text-3xl font-bold text-blue-400">{stats.entriesCount}</h3>
-                <p className="text-sm text-slate-400">Entries This Year</p>
+                <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.entriesCount}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Entries This Year</p>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-slate-800 border-none">
+          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-none">
             <CardContent className="flex items-center p-4">
-              <div className="rounded-full bg-red-900/30 p-2 mr-4">
-                <MessageSquareText className="h-6 w-6 text-red-400" />
+              <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-2 mr-4">
+                <MessageSquareText className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-3xl font-bold text-red-400">{stats.wordsWritten.toLocaleString()}</h3>
-                <p className="text-sm text-slate-400">Words Written</p>
+                <h3 className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.wordsWritten.toLocaleString()}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Words Written</p>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-slate-800 border-none">
+          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-none">
             <CardContent className="flex items-center p-4">
-              <div className="rounded-full bg-purple-900/30 p-2 mr-4">
-                <Calendar className="h-6 w-6 text-purple-400" />
+              <div className="rounded-full bg-purple-100 dark:bg-purple-900/30 p-2 mr-4">
+                <Calendar className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="text-3xl font-bold text-purple-400">{stats.daysJournaled}</h3>
-                <p className="text-sm text-slate-400">Days Journaled</p>
+                <h3 className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.daysJournaled}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Days Journaled</p>
               </div>
             </CardContent>
           </Card>
@@ -253,7 +277,7 @@ const JournalEntries: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Search journal entries..."
-              className="bg-slate-800 border-none pl-10"
+              className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 pl-10"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -261,7 +285,7 @@ const JournalEntries: React.FC = () => {
         </div>
 
         <Tabs defaultValue={selectedMonth || months[0]} className="mb-6">
-          <TabsList className="bg-slate-800 w-full h-auto flex overflow-x-auto p-1">
+          <TabsList className="bg-slate-100 dark:bg-slate-800 w-full h-auto flex overflow-x-auto p-1">
             {months.map(month => (
               <TabsTrigger 
                 key={month} 
@@ -280,10 +304,10 @@ const JournalEntries: React.FC = () => {
             <div className="animate-spin h-8 w-8 border-4 border-t-blue-500 border-slate-200 rounded-full"></div>
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="text-center py-12 bg-slate-800 rounded-lg">
+          <div className="text-center py-12 bg-slate-100 dark:bg-slate-800 rounded-lg">
             <BookOpen className="h-12 w-12 mx-auto mb-4 text-slate-500" />
-            <h3 className="text-xl font-semibold mb-2">No entries found</h3>
-            <p className="text-slate-400 mb-6">
+            <h3 className="text-xl font-semibold mb-2 text-slate-800 dark:text-white">No entries found</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
               {entries.length === 0 
                 ? "You haven't written any journal entries yet." 
                 : "No entries match your current filters."}
@@ -299,16 +323,16 @@ const JournalEntries: React.FC = () => {
             <div className="space-y-6">
               {Object.entries(groupedEntries).map(([date, entriesForDate]) => (
                 <div key={date} className="space-y-4">
-                  <h2 className="text-xl font-semibold">{date}</h2>
+                  <h2 className="text-xl font-semibold text-slate-800 dark:text-white">{date}</h2>
                   
                   {entriesForDate.map((entry, index) => (
-                    <Card key={index} className="bg-slate-800 border-none overflow-hidden">
+                    <Card key={index} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-none overflow-hidden">
                       <CardContent className="p-0">
                         <div className="p-5">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-full ${getMoodBgColor(entry.level)} flex items-center justify-center`}>
-                                <div className={`w-5 h-5 rounded-full ${entry.level > 5 ? 'bg-green-400' : 'bg-blue-400'}`}></div>
+                                <div className={`w-5 h-5 rounded-full ${entry.level > 5 ? 'bg-green-600 dark:bg-green-400' : 'bg-blue-600 dark:bg-blue-400'}`}></div>
                               </div>
                               <div>
                                 <p className={`font-medium ${getMoodColor(entry.level)}`}>
@@ -316,21 +340,21 @@ const JournalEntries: React.FC = () => {
                                 </p>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {entry.emotions.map(emotion => (
-                                    <Badge key={emotion} variant="outline" className="text-xs bg-slate-700">
+                                    <Badge key={emotion} variant="outline" className="text-xs bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                                       {emotion}
                                     </Badge>
                                   ))}
                                 </div>
                               </div>
                             </div>
-                            <p className="text-sm text-slate-400">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
                               {format(entry.timestamp, 'h:mm a')}
                             </p>
                           </div>
                           
                           <div className="mb-4">
-                            <h3 className="text-lg font-medium mb-2">{entry.question}</h3>
-                            <p className="text-slate-300 whitespace-pre-line">{entry.notes}</p>
+                            <h3 className="text-lg font-medium mb-2 text-slate-800 dark:text-white">{entry.question}</h3>
+                            <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line">{entry.notes}</p>
                           </div>
                         </div>
                       </CardContent>
