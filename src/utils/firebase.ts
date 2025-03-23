@@ -360,7 +360,7 @@ export const getJournalEntries = async (userId: string): Promise<JournalEntry[]>
       
       // Convert Firestore data to our interface format and sort by date
       return entries
-        .map((entry: any) => ({
+        .map((entry) => ({
           ...entry,
           timestamp: entry.timestamp.toDate() // Convert Timestamp to JS Date
         }))

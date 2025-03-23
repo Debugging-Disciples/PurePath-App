@@ -30,7 +30,6 @@ import { useAuth } from '../utils/auth';
 import { 
   ChatMessage, 
   ChatRoom, 
-  initializeDefaultChatRooms, 
   getAvailableRooms, 
   getRoomMessages, 
   sendMessage, 
@@ -63,7 +62,7 @@ const Community: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        await initializeDefaultChatRooms();
+        // await initializeDefaultChatRooms();
         const rooms = await getAvailableRooms(currentUser.uid, userProfile?.gender);
         setChatRooms(rooms);
         

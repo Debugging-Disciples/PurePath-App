@@ -46,63 +46,63 @@ export interface ChatRoom {
   };
 }
 
-// Create default chat rooms if they don't exist
-export const initializeDefaultChatRooms = async () => {
-  try {
-    // Check if main chat room exists
-    const mainRoomRef = doc(db, 'rooms', 'main');
-    const mainRoomDoc = await getDoc(mainRoomRef);
+// // Create default chat rooms if they don't exist
+// export const initializeDefaultChatRooms = async () => {
+//   try {
+//     // Check if main chat room exists
+//     const mainRoomRef = doc(db, 'rooms', 'main');
+//     const mainRoomDoc = await getDoc(mainRoomRef);
     
-    if (!mainRoomDoc.exists()) {
-      // Create main chat room
-      await setDoc(mainRoomRef, {
-        name: "Main Chat",
-        participants: [],
-        createdAt: serverTimestamp(),
-        createdBy: 'system',
-        type: 'main'
-      });
-      console.log("Main chat room created");
-    }
+//     if (!mainRoomDoc.exists()) {
+//       // Create main chat room
+//       await setDoc(mainRoomRef, {
+//         name: "Main Chat",
+//         participants: [],
+//         createdAt: serverTimestamp(),
+//         createdBy: 'system',
+//         type: 'main'
+//       });
+//       console.log("Main chat room created");
+//     }
     
-    // Check if men's chat room exists
-    const menRoomRef = doc(db, 'rooms', 'men');
-    const menRoomDoc = await getDoc(menRoomRef);
+//     // Check if men's chat room exists
+//     const menRoomRef = doc(db, 'rooms', 'men');
+//     const menRoomDoc = await getDoc(menRoomRef);
     
-    if (!menRoomDoc.exists()) {
-      // Create men's chat room
-      await setDoc(menRoomRef, {
-        name: "Men's Chat",
-        participants: [],
-        createdAt: serverTimestamp(),
-        createdBy: 'system',
-        type: 'men'
-      });
-      console.log("Men's chat room created");
-    }
+//     if (!menRoomDoc.exists()) {
+//       // Create men's chat room
+//       await setDoc(menRoomRef, {
+//         name: "Men's Chat",
+//         participants: [],
+//         createdAt: serverTimestamp(),
+//         createdBy: 'system',
+//         type: 'men'
+//       });
+//       console.log("Men's chat room created");
+//     }
     
-    // Check if women's chat room exists
-    const womenRoomRef = doc(db, 'rooms', 'women');
-    const womenRoomDoc = await getDoc(womenRoomRef);
+//     // Check if women's chat room exists
+//     const womenRoomRef = doc(db, 'rooms', 'women');
+//     const womenRoomDoc = await getDoc(womenRoomRef);
     
-    if (!womenRoomDoc.exists()) {
-      // Create women's chat room
-      await setDoc(womenRoomRef, {
-        name: "Women's Chat",
-        participants: [],
-        createdAt: serverTimestamp(),
-        createdBy: 'system',
-        type: 'women'
-      });
-      console.log("Women's chat room created");
-    }
+//     if (!womenRoomDoc.exists()) {
+//       // Create women's chat room
+//       await setDoc(womenRoomRef, {
+//         name: "Women's Chat",
+//         participants: [],
+//         createdAt: serverTimestamp(),
+//         createdBy: 'system',
+//         type: 'women'
+//       });
+//       console.log("Women's chat room created");
+//     }
     
-    return true;
-  } catch (error) {
-    console.error("Error initializing default chat rooms:", error);
-    return false;
-  }
-};
+//     return true;
+//   } catch (error) {
+//     console.error("Error initializing default chat rooms:", error);
+//     return false;
+//   }
+// };
 
 // Get available chat rooms for a user based on their gender
 export const getAvailableRooms = (userId: string, gender?: string) => {
