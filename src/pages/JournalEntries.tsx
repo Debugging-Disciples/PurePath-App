@@ -86,15 +86,6 @@ const JournalEntries: React.FC = () => {
     }
   }, []);
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -221,10 +212,6 @@ const JournalEntries: React.FC = () => {
           </div>
           
           <div className="flex gap-2 items-center">
-            <div className="flex items-center space-x-2 mr-2">
-              <span className="text-sm">{isDarkMode ? 'Dark' : 'Light'}</span>
-              <Switch checked={isDarkMode} onCheckedChange={toggleDarkMode} />
-            </div>
             <Button variant="outline" size="icon" className="rounded-full">
               <Search className="h-5 w-5" />
             </Button>
