@@ -25,9 +25,10 @@ This project is built with modern web technologies:
 
 - 🔒 **Secure Authentication**: User account creation and login
 - 📊 **Progress Analytics**: Track your journey with visual analytics
-- 🧘 **Guided Meditations**: Access specialized meditations
+- 🧘 **Guided Meditations**: Access specialized meditations and journal prompts 
 - 🆘 **Emergency Support**: Panic button for immediate help
 - 🌍 **Global Community**: Connect with others on the same journey
+
 
 
 ## Getting Started
