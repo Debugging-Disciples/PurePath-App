@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp } from 'firebase/firestore';
@@ -297,13 +298,13 @@ interface LogRelapseResult {
   message?: string;
 }
 
-export const logRelapse = async (userId: string, triggers: string, notes?: string): Promise<LogRelapseResult> => {
+export const logRelapse = async (userId: string, triggers: string[], notes?: string): Promise<LogRelapseResult> => {
   try {
     const userDocRef = doc(db, 'users', userId);  // Reference to the user's document
 
     const relapseObject = {
       timestamp: Timestamp.now(),
-      triggers: triggers,
+      triggers: triggers,  // Now we store the array of triggers
       notes: notes || ''
     };
 
