@@ -46,64 +46,6 @@ export interface ChatRoom {
   };
 }
 
-// // Create default chat rooms if they don't exist
-// export const initializeDefaultChatRooms = async () => {
-//   try {
-//     // Check if main chat room exists
-//     const mainRoomRef = doc(db, 'rooms', 'main');
-//     const mainRoomDoc = await getDoc(mainRoomRef);
-    
-//     if (!mainRoomDoc.exists()) {
-//       // Create main chat room
-//       await setDoc(mainRoomRef, {
-//         name: "Main Chat",
-//         participants: [],
-//         createdAt: serverTimestamp(),
-//         createdBy: 'system',
-//         type: 'main'
-//       });
-//       console.log("Main chat room created");
-//     }
-    
-//     // Check if men's chat room exists
-//     const menRoomRef = doc(db, 'rooms', 'men');
-//     const menRoomDoc = await getDoc(menRoomRef);
-    
-//     if (!menRoomDoc.exists()) {
-//       // Create men's chat room
-//       await setDoc(menRoomRef, {
-//         name: "Men's Chat",
-//         participants: [],
-//         createdAt: serverTimestamp(),
-//         createdBy: 'system',
-//         type: 'men'
-//       });
-//       console.log("Men's chat room created");
-//     }
-    
-//     // Check if women's chat room exists
-//     const womenRoomRef = doc(db, 'rooms', 'women');
-//     const womenRoomDoc = await getDoc(womenRoomRef);
-    
-//     if (!womenRoomDoc.exists()) {
-//       // Create women's chat room
-//       await setDoc(womenRoomRef, {
-//         name: "Women's Chat",
-//         participants: [],
-//         createdAt: serverTimestamp(),
-//         createdBy: 'system',
-//         type: 'women'
-//       });
-//       console.log("Women's chat room created");
-//     }
-    
-//     return true;
-//   } catch (error) {
-//     console.error("Error initializing default chat rooms:", error);
-//     return false;
-//   }
-// };
-
 // Get available chat rooms for a user based on their gender
 export const getAvailableRooms = (userId: string, gender?: string) => {
   return new Promise<ChatRoom[]>((resolve, reject) => {
@@ -156,39 +98,52 @@ export const getAvailableRooms = (userId: string, gender?: string) => {
 
 // Get messages for a specific room
 export const getRoomMessages = (roomId: string) => {
-  return new Promise<ChatMessage[]>((resolve, reject) => {
-    try {
-      const messagesQuery = query(
-        collection(db, 'rooms', roomId, 'messages'),
-        orderBy('timestamp', 'asc')
-      );
-      
-      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-        const messages: ChatMessage[] = [];
-        
-        snapshot.forEach((doc) => {
-          const messageData = doc.data() as Omit<ChatMessage, 'id'>;
-          messages.push({
-            id: doc.id,
-            ...messageData,
-            timestamp: messageData.timestamp as Timestamp
-          });
-        });
-        
-        resolve(messages);
-      }, (error) => {
-        console.error(`Error getting messages for room ${roomId}:`, error);
-        reject(error);
+  console.log(`Starting real-time listener for messages in room ${roomId}`);
+  
+  try {
+    const messagesQuery = query(
+      collection(db, 'rooms', roomId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+    
+    // Return the unsubscribe function directly so it can be used by the component
+    return onSnapshot(messagesQuery, (snapshot) => {
+      console.log(`Received snapshot update for room ${roomId} with ${snapshot.docs.length} messages`);
+    }, (error) => {
+      console.error(`Error in messages listener for room ${roomId}:`, error);
+    });
+  } catch (error) {
+    console.error("Error setting up messages listener:", error);
+    // Return a dummy unsubscribe function if setup fails
+    return () => {};
+  }
+};
+
+// Separate function to get messages once without real-time updates
+export const fetchRoomMessages = async (roomId: string): Promise<ChatMessage[]> => {
+  try {
+    const messagesQuery = query(
+      collection(db, 'rooms', roomId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+    
+    const snapshot = await getDocs(messagesQuery);
+    const messages: ChatMessage[] = [];
+    
+    snapshot.forEach((doc) => {
+      const messageData = doc.data() as Omit<ChatMessage, 'id'>;
+      messages.push({
+        id: doc.id,
+        ...messageData,
+        timestamp: messageData.timestamp as Timestamp
       });
-      
-      // Return unsubscribe function so caller can stop listening when needed
-      return unsubscribe;
-    } catch (error) {
-      console.error("Error in getRoomMessages:", error);
-      reject(error);
-      return () => {};
-    }
-  });
+    });
+    
+    return messages;
+  } catch (error) {
+    console.error(`Error fetching messages for room ${roomId}:`, error);
+    return [];
+  }
 };
 
 // Send a message to a room

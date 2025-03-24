@@ -31,7 +31,8 @@ import {
   ChatMessage, 
   ChatRoom, 
   getAvailableRooms, 
-  getRoomMessages, 
+  getRoomMessages,
+  fetchRoomMessages,
   sendMessage, 
   addReaction, 
   removeReaction,
@@ -54,6 +55,7 @@ const Community: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [newRoomName, setNewRoomName] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageListenerRef = useRef<() => void>(() => {});
   const { currentUser, userProfile } = useAuth();
   
   // Initialize default chat rooms and fetch available rooms
@@ -62,7 +64,6 @@ const Community: React.FC = () => {
       if (!currentUser) return;
       
       try {
-        // await initializeDefaultChatRooms();
         const rooms = await getAvailableRooms(currentUser.uid, userProfile?.gender);
         setChatRooms(rooms);
         
@@ -108,30 +109,70 @@ const Community: React.FC = () => {
     fetchUsers();
   }, []);
   
-  // Fetch messages for selected room
+  // Set up real-time message listener when room changes
   useEffect(() => {
+    // Clean up previous listener if it exists
+    if (messageListenerRef.current) {
+      messageListenerRef.current();
+      messageListenerRef.current = () => {};
+    }
+    
     if (!selectedRoom) return;
     
     setMessagesLoading(true);
     
-    const fetchMessages = async () => {
+    // Initial fetch of messages
+    const fetchInitialMessages = async () => {
       try {
-        await getRoomMessages(selectedRoom.id)
-          .then((fetchedMessages) => {
-            setMessages(fetchedMessages);
-            setMessagesLoading(false);
-          })
-          .catch((error) => {
-            console.error(`Error fetching messages for room ${selectedRoom.id}:`, error);
-            setMessagesLoading(false);
-          });
+        const initialMessages = await fetchRoomMessages(selectedRoom.id);
+        setMessages(initialMessages);
+        setMessagesLoading(false);
       } catch (error) {
-        console.error("Error in fetchMessages:", error);
+        console.error(`Error fetching initial messages for room ${selectedRoom.id}:`, error);
         setMessagesLoading(false);
       }
     };
     
-    fetchMessages();
+    fetchInitialMessages();
+    
+    // Set up real-time listener for messages
+    const unsubscribe = getRoomMessages(selectedRoom.id);
+    
+    // Store the unsubscribe function in a ref to clean up later
+    messageListenerRef.current = unsubscribe;
+    
+    // Add a custom listener to the messages collection
+    const messagesQuery = collection(db, 'rooms', selectedRoom.id, 'messages');
+    const realTimeListener = onSnapshot(messagesQuery, (snapshot) => {
+      const updatedMessages: ChatMessage[] = [];
+      
+      snapshot.forEach((doc) => {
+        const messageData = doc.data() as Omit<ChatMessage, 'id'>;
+        updatedMessages.push({
+          id: doc.id,
+          ...messageData,
+          timestamp: messageData.timestamp as Timestamp
+        });
+      });
+      
+      // Sort messages by timestamp
+      updatedMessages.sort((a, b) => {
+        const aTime = a.timestamp instanceof Timestamp ? a.timestamp.toMillis() : 0;
+        const bTime = b.timestamp instanceof Timestamp ? b.timestamp.toMillis() : 0;
+        return aTime - bTime;
+      });
+      
+      setMessages(updatedMessages);
+      setMessagesLoading(false);
+    });
+    
+    // Updated cleanup function
+    return () => {
+      if (messageListenerRef.current) {
+        messageListenerRef.current();
+      }
+      realTimeListener();
+    };
   }, [selectedRoom]);
   
   // Scroll to bottom when messages change
@@ -241,6 +282,17 @@ const Community: React.FC = () => {
     }
   };
   
+  // Get online count (this is a placeholder - in a real app you'd implement presence tracking)
+  const getOnlineCount = (room: ChatRoom) => {
+    // For demonstration, we'll assume 1-3 random participants are online
+    const participantCount = room.participants.length;
+    const onlineCount = participantCount > 0 
+      ? Math.min(Math.ceil(Math.random() * participantCount), 3) 
+      : 0;
+    
+    return onlineCount;
+  };
+
   // Render message reactions
   const renderReactions = (message: ChatMessage) => {
     if (!message.reactions || Object.keys(message.reactions).length === 0) {
@@ -348,28 +400,44 @@ const Community: React.FC = () => {
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
-                        {chatRooms.map((room) => (
-                          <div
-                            key={room.id}
-                            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
-                              selectedRoom?.id === room.id 
-                                ? 'bg-primary text-primary-foreground' 
-                                : 'hover:bg-muted'
-                            }`}
-                            onClick={() => setSelectedRoom(room)}
-                          >
-                            <div className="flex-1 truncate">
-                              <div className="font-medium">{room.name}</div>
-                              {room.lastMessage && (
-                                <div className="text-xs truncate opacity-80">
-                                  {getUserDisplayName(room.lastMessage.senderId)}: {room.lastMessage.text}
+                        {chatRooms.map((room) => {
+                          // Calculate online count for display
+                          const onlineCount = getOnlineCount(room);
+                          
+                          return (
+                            <div
+                              key={room.id}
+                              className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                                selectedRoom?.id === room.id 
+                                  ? 'bg-primary text-primary-foreground' 
+                                  : 'hover:bg-muted'
+                              }`}
+                              onClick={() => setSelectedRoom(room)}
+                            >
+                              <div className="flex-1 truncate">
+                                <div className="font-medium">{room.name}</div>
+                                {room.lastMessage && (
+                                  <div className="text-xs truncate opacity-80">
+                                    {getUserDisplayName(room.lastMessage.senderId)}: {room.lastMessage.text}
+                                  </div>
+                                )}
+                                <div className="text-xs mt-1">
+                                  <span className="font-medium">
+                                    {room.participants.length} members
+                                  </span>
+                                  {onlineCount > 0 && (
+                                    <span className="ml-2">
+                                      <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-1"></span>
+                                      {onlineCount} online
+                                    </span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
+                              {room.type === 'men' && <Badge variant="outline">👨 Men</Badge>}
+                              {room.type === 'women' && <Badge variant="outline">👩 Women</Badge>}
                             </div>
-                            {room.type === 'men' && <Badge variant="outline">👨 Men</Badge>}
-                            {room.type === 'women' && <Badge variant="outline">👩 Women</Badge>}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -380,10 +448,23 @@ const Community: React.FC = () => {
               <div className="md:col-span-3">
                 <Card className="mb-6">
                   <CardHeader className="pb-3">
-                    <CardTitle>{selectedRoom?.name || 'Select a chat room'}</CardTitle>
-                    <CardDescription>
-                      A safe space to share experiences and support each other
-                    </CardDescription>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>{selectedRoom?.name || 'Select a chat room'}</CardTitle>
+                        <CardDescription>
+                          A safe space to share experiences and support each other
+                        </CardDescription>
+                      </div>
+                      
+                      {selectedRoom && (
+                        <div className="text-sm text-muted-foreground">
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-1" />
+                            <span>{selectedRoom.participants.length} members</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
@@ -423,7 +504,7 @@ const Community: React.FC = () => {
                                     <div className="flex items-baseline gap-2">
                                       <span className="text-sm font-medium">{getUserDisplayName(msg.senderId)}</span>
                                       <span className="text-xs text-muted-foreground">
-                                        {formatTimeAgo(msg.timestamp.toDate())}
+                                        {msg.timestamp && msg.timestamp.toDate ? formatTimeAgo(msg.timestamp.toDate()) : 'Just now'}
                                       </span>
                                     </div>
                                     
