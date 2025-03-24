@@ -10,7 +10,9 @@ import {
   TrendingUp,
   MessageCircle,
   Map,
-  HeartPulse
+  HeartPulse,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ import CommunityMap from '@/components/CommunityMap';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import VerseSlideshow from '@/components/VerseSlideshow';
+import DatePicker from '@/components/ui/date-picker';
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('en-US', { 
@@ -35,6 +38,8 @@ const Dashboard: React.FC = () => {
   const [streak, setStreak] = useState(0);
   const [lastCheckIn, setLastCheckIn] = useState<Date | null>(null);
   const [isCheckedInToday, setIsCheckedInToday] = useState(false);
+  const [isCheckInSide, setIsCheckInSide] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Simulate featured meditations
   const featuredMeditations = [
@@ -77,9 +82,10 @@ const Dashboard: React.FC = () => {
   
   const handleCheckIn = async () => {
     if (!currentUser) return;
-    
+    console.log(currentUser.uid)
     try {
       const result = await updateStreak(currentUser.uid);
+      console.log(result)
       
       if (result.success) {
         // Refresh user data
@@ -109,11 +115,11 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleStreakSet = async (startDate: Date) => {
+  const handleStreakSet = async () => {
     if (!currentUser) return;
 
     try {
-      const result = await updateStreakStart(currentUser.uid, startDate);
+      const result = await updateStreakStart(currentUser.uid, selectedDate);
       
       if (result.success) {
         // Refresh user data
@@ -125,7 +131,7 @@ const Dashboard: React.FC = () => {
 
         if (result.message === 'Streak start updated successfully') {
           toast.success("Streak start updated!", {
-            description: `Your streak has been reset to start from ${formatDate(startDate)}.`,
+            description: `Your streak has been reset to start from ${formatDate(selectedDate)}.`,
           });
         }
       }
@@ -134,6 +140,8 @@ const Dashboard: React.FC = () => {
       toast.error("Failed to set streak start date", {
         description: "Please try again later.",
       });
+    } finally {
+      setIsCheckInSide(true);
     }
   };
   
@@ -175,40 +183,86 @@ const Dashboard: React.FC = () => {
             "border-primary/20 h-full",
             streak > 0 && "bg-gradient-to-br from-primary/10 to-transparent"
           )}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center">
-                <Trophy className="h-5 w-5 mr-2 text-primary" />
-                Your Current Streak
-              </CardTitle>
-              <CardDescription>
-                {isCheckedInToday 
-                  ? 'You\'ve checked in today. Great job!' 
-                  : 'Remember to check in daily to maintain your streak'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-center py-6">
-                <div className="text-center">
-                  <div className="text-5xl font-bold mb-2 text-primary">
-                    {streak}
+            {/* Current Streak Card - Check In Side */}
+            {isCheckInSide ? (
+              <div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center">
+                    <Trophy className="h-5 w-5 mr-2 text-primary" />
+                    Your Current Streak
+                  </CardTitle>
+                  <CardDescription>
+                    {isCheckedInToday 
+                      ? 'You\'ve checked in today. Great job!' 
+                      : 'Remember to check in daily to maintain your streak'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center py-6">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold mb-2 text-primary">
+                        {streak}
+                      </div>
+                      <div className="text-muted-foreground">
+                        consecutive {streak === 1 ? 'day' : 'days'}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    consecutive {streak === 1 ? 'day' : 'days'}
-                  </div>
-                </div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-center space-y-2">
+                  <Button 
+                    onClick={handleCheckIn} 
+                    disabled={isCheckedInToday}
+                    variant={isCheckedInToday ? "outline" : "default"}
+                    className="w-full"
+                  >
+                    {isCheckedInToday ? 'Already Checked In Today' : 'Check In for Today'}
+                    {!isCheckedInToday && <Calendar className="ml-2 h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => setIsCheckInSide(false)}
+                  >
+                    Edit Streak Start Date
+                  </Button>
+                </CardFooter>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={handleCheckIn} 
-                disabled={isCheckedInToday}
-                variant={isCheckedInToday ? "outline" : "default"}
-                className="w-full"
-              >
-                {isCheckedInToday ? 'Already Checked In Today' : 'Check In for Today'}
-                {!isCheckedInToday && <Calendar className="ml-2 h-4 w-4" />}
-              </Button>
-            </CardFooter>
+            ) : (
+              // Current Streak Card - Set Streak Start Date Side
+              <div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center">
+                    <Trophy className="h-5 w-5 mr-2 text-primary" />
+                    Set Your Streak
+                  </CardTitle>
+                  <CardDescription>
+                    Change Your Streak Start Date
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center py-6">
+                    {/* calculate the streak start date to display in DatePicker */}
+                    <DatePicker onDateChange={setSelectedDate} preselectedDate={new Date(Date.now() - streak * 24 * 60 * 60 * 1000)} />
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-center space-y-2">
+                  <Button 
+                    onClick={handleStreakSet} 
+                    className="w-full"
+                  >
+                    Set Streak Start Date
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => setIsCheckInSide(true)}
+                  >
+                    Cancel
+                  </Button>
+                </CardFooter>
+              </div>
+            )}
           </Card>
         </motion.div>
         
