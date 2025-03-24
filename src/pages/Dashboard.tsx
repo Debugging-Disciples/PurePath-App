@@ -109,6 +109,33 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleStreakSet = async (startDate: Date) => {
+    if (!currentUser) return;
+
+    try {
+      const result = await updateStreakStart(currentUser.uid, startDate);
+      
+      if (result.success) {
+        // Refresh user data
+        const updatedProfile = await getUserProfile(currentUser.uid);
+        
+        if (updatedProfile) {
+          setStreak(updatedProfile.streakDays || 0);
+        }
+
+        if (result.message === 'Streak start updated successfully') {
+          toast.success("Streak start updated!", {
+            description: `Your streak has been reset to start from ${formatDate(startDate)}.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating streak:', error);
+      toast.error("Failed to set streak start date", {
+        description: "Please try again later.",
+      });
+    }
+  };
   
   
   return (
