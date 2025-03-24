@@ -154,6 +154,7 @@ export const register = async (email: string, password: string, username: string
       role: 'member', // Default role
       joinedAt: Timestamp.now(),
       streakDays: 0,
+      streakStart: Timestamp.now(),
       lastCheckIn: Timestamp.now()
     });
     
@@ -304,6 +305,32 @@ export const updateStreak = async (userId: string) => {
     return { success: false, message: 'User not found' };
   } catch (error) {
     console.error('Error updating streak:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const updateStreakStart = async (userId: string, startDate: Date) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const lastCheckIn = userData.lastCheckIn?.toDate() || new Date(0);
+
+      const diffInMilliseconds = startDate.getTime() - lastCheckIn.getTime();
+      const diffInDays = Math.floor(diffInMilliseconds / (1000 * 60 * 60 * 24));
+
+      await updateDoc(userRef, {
+        streakDays: diffInDays > 0 ? diffInDays : 0, // Ensure streakDays is not negative
+      });
+      
+      return { success: true, diffInDays, message: 'Streak start updated successfully' };
+    }
+
+    return { success: false, message: 'User not found' };
+  } catch (error) {
+    console.error('Error setting streak:', error);
     return { success: false, message: error.message };
   }
 };
