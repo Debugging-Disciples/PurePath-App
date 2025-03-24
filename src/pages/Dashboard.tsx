@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
-import { updateStreak, getUserProfile } from '../utils/firebase';
+import { updateStreak, getUserProfile, updateStreakStart } from '../utils/firebase';
 import { cn } from '@/lib/utils';
 import { 
   ArrowRight, 
