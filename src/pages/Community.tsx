@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { motion } from 'framer-motion';
 import { Send, Users, MessageCircle, Plus, MoreVertical, Smile, Reply, Check } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
 import { db, UserProfile } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
 import { 
@@ -38,7 +38,6 @@ import {
   removeReaction,
   createGroupChat
 } from '../utils/chatService';
-import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 // Common emoji reactions
