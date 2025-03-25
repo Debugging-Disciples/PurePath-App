@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
@@ -59,14 +60,32 @@ const PaginationLink = ({
 )
 PaginationLink.displayName = "PaginationLink"
 
+// Extended interface with isDisabled property
+type PaginationNavigationProps = React.ComponentProps<typeof PaginationLink> & {
+  isDisabled?: boolean
+}
+
 const PaginationPrevious = ({
   className,
+  isDisabled,
+  onClick,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
+}: PaginationNavigationProps) => (
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
-    className={cn("gap-1 pl-2.5", className)}
+    className={cn(
+      "gap-1 pl-2.5", 
+      className,
+      isDisabled && "pointer-events-none opacity-50"
+    )}
+    onClick={(e) => {
+      if (isDisabled) {
+        e.preventDefault();
+        return;
+      }
+      onClick?.(e);
+    }}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
@@ -77,12 +96,25 @@ PaginationPrevious.displayName = "PaginationPrevious"
 
 const PaginationNext = ({
   className,
+  isDisabled,
+  onClick,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
+}: PaginationNavigationProps) => (
   <PaginationLink
     aria-label="Go to next page"
     size="default"
-    className={cn("gap-1 pr-2.5", className)}
+    className={cn(
+      "gap-1 pr-2.5", 
+      className,
+      isDisabled && "pointer-events-none opacity-50"
+    )}
+    onClick={(e) => {
+      if (isDisabled) {
+        e.preventDefault();
+        return;
+      }
+      onClick?.(e);
+    }}
     {...props}
   >
     <span>Next</span>

@@ -1,7 +1,6 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, limit } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 // Define user profile interface
@@ -12,7 +11,10 @@ export interface UserProfile {
   username?: string;
   email?: string;
   gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
-  location?: GeoPoint;
+  location?: {
+    country: string;
+    state?: string | null;
+  };
   role?: 'admin' | 'member';
   joinedAt?: Timestamp;
   streakDays?: number;
@@ -27,6 +29,17 @@ export interface UserProfile {
   };
 }
 
+// Journal entry interface
+export interface JournalEntry {
+  id?: string;
+  userId: string;
+  timestamp: Date;
+  question: string;    // The prompt that was shown
+  notes: string;       // User's journal response
+  level: number;       // Mood level (1-10)
+  emotions: string[];  // Selected emotions
+}
+
 // Firebase configuration with provided credentials
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -38,7 +51,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-console.log("Firebase config:", firebaseConfig);
 
 // Initialize Firebase with better error handling
 let app, auth, db;
@@ -63,62 +75,23 @@ export { app, auth, db };
 // Secure way to check for admin permissions
 // This function uses a hash comparison approach to avoid exposing the email directly
 export const isUserAdmin = async (email: string): Promise<boolean> => {
-  if (!db) return false;
-  
+  if (!db) {
+    console.error("Firebase db not initialized");
+    return false;
+  }
+
   try {
-    // First approach: Check if user has admin role in their profile
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email), where('role', '==', 'admin'));
     const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      return true;
-    }
-    
-    // Second approach: Check against admins collection
-    const adminsRef = collection(db, 'admins');
-    const adminDoc = await getDoc(doc(adminsRef, 'authorized_emails'));
-    
-    if (adminDoc.exists() && adminDoc.data().emails) {
-      return adminDoc.data().emails.includes(email);
-    }
-    
-    // Fallback to hardcoded verification (using a hashed comparison for security)
-    // This allows initial admin setup even if collections don't exist yet
-    const adminHash = 'b42a70c370ad4562dbd5166f1275324fa254299f'; // SHA1 hash of "justinh.tech1@gmail.com"
-    const emailHash = await sha1(email.trim().toLowerCase());
-    
-    return emailHash === adminHash;
+
+    return !querySnapshot.empty;
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
   }
 };
 
-// Utility function to create SHA-1 hash for email comparison
-// This prevents exposing the actual admin email in the code
-async function sha1(str: string): Promise<string> {
-  const buffer = new TextEncoder().encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Admin setup function (should be called once to set up the admin in Firestore)
-export const setupAdminUser = async () => {
-  if (!db) return;
-  
-  try {
-    const adminsRef = collection(db, 'admins');
-    await setDoc(doc(adminsRef, 'authorized_emails'), {
-      emails: ['justinh.tech1@gmail.com']
-    });
-    
-    console.log('Admin setup complete');
-  } catch (error) {
-    console.error('Error setting up admin:', error);
-  }
-};
 
 // Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
@@ -138,7 +111,15 @@ export const login = async (email: string, password: string) => {
   }
 };
 
-export const register = async (email: string, password: string, username: string, firstName: string, lastName: string, gender: string, location?: { lat: number, lng: number }) => {
+export const register = async (
+  email: string, 
+  password: string, 
+  username: string, 
+  firstName: string, 
+  lastName: string, 
+  gender: string, 
+  location?: { country: string; state?: string | null }
+) => {
   try {
     console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -149,8 +130,10 @@ export const register = async (email: string, password: string, username: string
       firstName,
       lastName,
       email,
+      meditations: [],
+      relapses: [],  
       gender,
-      location: location ? new GeoPoint(location.lat, location.lng) : null,
+      location: location || null,
       role: 'member', // Default role
       joinedAt: Timestamp.now(),
       streakDays: 0,
@@ -341,22 +324,24 @@ export const updateStreakStart = async (userId: string, startDate: Date) => {
 };
 
 // Log relapse with multiple triggers (used for analytics)
-export const logRelapse = async (userId: string, triggers: string[], notes?: string) => {
+interface LogRelapseResult {
+  success: boolean;
+  message?: string;
+}
+
+export const logRelapse = async (userId: string, triggers: string, notes?: string): Promise<LogRelapseResult> => {
   try {
-    await addDoc(collection(db, 'relapses'), {
-      userId,
+    const userDocRef = doc(db, 'users', userId);  // Reference to the user's document
+
+    const relapseObject = {
       timestamp: Timestamp.now(),
       triggers: triggers,
       notes: notes || ''
+    };
+
+    await updateDoc(userDocRef, {
+      relapses: arrayUnion(relapseObject) // Append the relapse object to the 'relapses' array
     });
-    
-    // Reset streak
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      streakDays: 0,
-      lastCheckIn: Timestamp.now()
-    });
-    
     return { success: true, message: 'Progress reset. Remember: every moment is a new opportunity.' };
   } catch (error) {
     console.error('Error logging relapse:', error);
@@ -364,46 +349,61 @@ export const logRelapse = async (userId: string, triggers: string[], notes?: str
   }
 };
 
-// Get user triggers from the last 7 days
-export const getUserTriggers = async (userId: string): Promise<{ name: string; count: number; }[]> => {
+// Journal functions
+export const addJournalEntry = async (entry: JournalEntry): Promise<boolean> => {
+  if (!db || !entry.userId) {
+    console.error("Firebase db not initialized or missing userId");
+    return false;
+  }
+  
   try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const userRef = doc(db, 'users', entry.userId);
     
-    const relapsesRef = collection(db, 'relapses');
-    const q = query(
-      relapsesRef,
-      where('userId', '==', userId),
-      where('timestamp', '>=', Timestamp.fromDate(sevenDaysAgo)),
-      orderBy('timestamp', 'desc')
-    );
+    // Convert JS Date to Firestore Timestamp
+    const entryWithTimestamp = {
+      ...entry,
+      timestamp: Timestamp.fromDate(entry.timestamp)
+    };
     
-    const querySnapshot = await getDocs(q);
-    
-    // Count the triggers
-    const triggerCounts: Record<string, number> = {};
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.triggers && Array.isArray(data.triggers)) {
-        data.triggers.forEach(trigger => {
-          triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
-        });
-      }
+    // Add to journal array in user document
+    await updateDoc(userRef, {
+      journal: arrayUnion(entryWithTimestamp)
     });
     
-    // Convert to array format for chart
-    const triggers = Object.entries(triggerCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
-    
-    // Sort by count (descending)
-    triggers.sort((a, b) => b.count - a.count);
-    
-    return triggers;
+    return true;
   } catch (error) {
-    console.error('Error fetching user triggers:', error);
+    console.error('Error adding journal entry:', error);
+    return false;
+  }
+};
+
+export const getJournalEntries = async (userId: string): Promise<JournalEntry[]> => {
+  if (!db) {
+    console.error("Firebase db not initialized");
+    return [];
+  }
+  
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists() && userDoc.data().journal) {
+      const entries = userDoc.data().journal;
+      
+      // Convert Firestore data to our interface format and sort by date
+      return entries
+        .map((entry) => ({
+          ...entry,
+          timestamp: entry.timestamp.toDate() // Convert Timestamp to JS Date
+        }))
+        .sort((a: JournalEntry, b: JournalEntry) => 
+          b.timestamp.getTime() - a.timestamp.getTime()
+        );
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error getting journal entries:', error);
     return [];
   }
 };
@@ -414,11 +414,11 @@ export const getCommunityLocations = async () => {
     const usersRef = collection(db, 'users');
     const querySnapshot = await getDocs(usersRef);
     
-    const locations: { id: string; location: GeoPoint }[] = [];
+    const locations: { id: string; location: { country: string; state?: string | null; } }[] = [];
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.location) {
+      if (data.location && data.location.country) {
         // Only include location data, not user identifiable information
         locations.push({
           id: doc.id,

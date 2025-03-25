@@ -50,9 +50,34 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data, className, type = '
     ? 'Your continuous days of staying on track'
     : 'How you\'ve been feeling day by day';
   
+  // Process streak data: if a relapse is found subtract 1, otherwise add 1
+  const processedData = React.useMemo(() => {
+    if (type !== 'streak') return data;
+    
+    return data.map((item, index, arr) => {
+      if (index === 0) return item;
+      
+      const prevItem = arr[index - 1];
+      
+      // Check if this is a relapse day
+      if (item.streak === 0) {
+        return {
+          ...item,
+          streak: Math.max(0, prevItem.streak - 1) // Subtract 1 from previous streak, but don't go below 0
+        };
+      }
+      
+      // Not a relapse day - add 1 to previous streak
+      return {
+        ...item,
+        streak: prevItem.streak + 1
+      };
+    });
+  }, [data, type]);
+  
   // Format data based on chart type
   const formattedData = type === 'streak'
-    ? data
+    ? processedData
     : data.filter(item => item.mood !== undefined);
   
   // Custom tooltip for streak chart

@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         try {
           const profile = await getUserProfile(user.uid);
-          console.log("User profile:", profile);
+          // console.log("User profile:", profile);
           setUserProfile(profile);
           
           // Check if user is admin

@@ -25,10 +25,21 @@ This project is built with modern web technologies:
 
 - 🔒 **Secure Authentication**: User account creation and login
 - 📊 **Progress Analytics**: Track your journey with visual analytics
-- 🧘 **Guided Meditations**: Access specialized meditations
+- 🧘 **Guided Meditations**: Access specialized meditations and journal prompts 
 - 🆘 **Emergency Support**: Panic button for immediate help
 - 🌍 **Global Community**: Connect with others on the same journey
-- 🔐 **Privacy-Focused**: All data is private and anonymized
+
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
 
 ## Getting Started
 
@@ -72,8 +83,10 @@ This project is built with modern web technologies:
    ```
 
    You can use the `.env.sample` file as a template.
+**Note: Enable email/pwd authentication in your firebase console.**
 
-5. Start the development server:
+
+6. Start the development server:
    ```bash
    npm run dev
    # or
@@ -82,7 +95,7 @@ This project is built with modern web technologies:
    pnpm dev
    ```
 
-6. Open your browser and navigate to `http://localhost:8080`
+7. Open your browser and navigate to `http://localhost:8080`
 
 ### Building for Production
 
@@ -119,13 +132,3 @@ This application uses Firebase Authentication for user management. Users can:
 - Log in with existing credentials
 - Access protected routes (dashboard, profile, etc.)
 - Admin users have access to additional 
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request

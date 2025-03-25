@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -12,6 +13,8 @@ import {
   Map,
   HeartPulse,
   CheckIcon
+  HeartPulse,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,7 +43,6 @@ const Dashboard: React.FC = () => {
   const [isCheckInSide, setIsCheckInSide] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
-  // Simulate featured meditations
   const featuredMeditations = [
     {
       id: '1',
@@ -48,6 +50,7 @@ const Dashboard: React.FC = () => {
       description: 'Learn to ride the wave of desire without giving in',
       duration: 10,
       category: 'Beginner',
+      favorite: false,
       imageUrl: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&q=80&w=500'
     },
     {
@@ -56,6 +59,7 @@ const Dashboard: React.FC = () => {
       description: 'Start your day with purpose and clear intentions',
       duration: 5,
       category: 'Daily',
+      favorite: false,
       imageUrl: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&q=80&w=500'
     }
   ];
@@ -64,7 +68,6 @@ const Dashboard: React.FC = () => {
     if (currentUser && userProfile) {
       setStreak(userProfile.streakDays || 0);
       
-      // Check if the user has checked in today
       if (userProfile.lastCheckIn) {
         const lastCheckInDate = userProfile.lastCheckIn.toDate();
         setLastCheckIn(lastCheckInDate);
@@ -87,7 +90,6 @@ const Dashboard: React.FC = () => {
       console.log(result)
       
       if (result.success) {
-        // Refresh user data
         const updatedProfile = await getUserProfile(currentUser.uid);
         
         if (updatedProfile) {
@@ -179,7 +181,6 @@ const Dashboard: React.FC = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Streak Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -282,7 +283,6 @@ const Dashboard: React.FC = () => {
           </Card>
         </motion.div>
         
-        {/* Quick Links Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -306,19 +306,19 @@ const Dashboard: React.FC = () => {
                 </Link>
               </Button>
               <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/community">
+                <Link to="/journal">
                   <div className="flex items-center">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    <span>Community Chat</span>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    <span>Journal</span>
                   </div>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/map">
+                <Link to="/community">
                   <div className="flex items-center">
-                    <Map className="mr-2 h-4 w-4" />
-                    <span>Community Map</span>
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    <span>Community Chat</span>
                   </div>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -336,7 +336,6 @@ const Dashboard: React.FC = () => {
           </Card>
         </motion.div>
         
-        {/* Panic Button Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

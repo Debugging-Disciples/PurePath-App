@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Import useEffect
 import { cn } from '@/lib/utils';
 import { Play, Pause, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,9 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/utils/auth';
+import { db } from '@/utils/firebase';
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 
 interface MeditationCardProps {
   id: string;
@@ -20,6 +22,7 @@ interface MeditationCardProps {
   description: string;
   duration: number; // in minutes
   category: string;
+  favorite: boolean;
   imageUrl?: string;
   className?: string;
 }
@@ -30,6 +33,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   description,
   duration,
   category,
+  favorite,
   imageUrl,
   className,
 }) => {
@@ -38,6 +42,23 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   const [progress, setProgress] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   let intervalRef: NodeJS.Timeout | null = null;
+  const { currentUser } = useAuth(); // Get the current user from auth context
+
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          setIsFavorited(userData.meditations?.includes(id) || false);
+        }
+      }
+    };
+
+    fetchFavoriteStatus();
+  }, [currentUser, id]); // Re-run when currentUser or id changes
 
   const handlePlayPause = () => {
     if (isPlaying) {
@@ -47,7 +68,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
       setIsPlaying(true);
       const totalSeconds = duration * 60;
       const incrementPerInterval = 100 / (totalSeconds / 0.1); // Update every 100ms
-      
+
       intervalRef = setInterval(() => {
         setProgress(prev => {
           const newProgress = prev + incrementPerInterval;
@@ -58,7 +79,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
           }
           return newProgress;
         });
-        
+
         setElapsedTime(prev => {
           const newTime = prev + 0.1;
           return newTime;
@@ -67,8 +88,31 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
     }
   };
 
-  const handleFavorite = () => {
-    setIsFavorited(!isFavorited);
+  const handleFavorite = async () => {
+    if (!currentUser) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', currentUser.uid);
+
+    try {
+      if (!isFavorited) {
+        await updateDoc(userDocRef, {
+          meditations: arrayUnion(id),
+        });
+        console.log('Added to favorites');
+      } else {
+        await updateDoc(userDocRef, {
+          meditations: arrayRemove(id),
+        });
+        console.log('Removed from favorites');
+      }
+
+      setIsFavorited(!isFavorited); // Update local state *after* Firebase update
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+    }
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -81,9 +125,9 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
     <Card className={cn("overflow-hidden transition-all duration-300 ease-apple hover:shadow-md", className)}>
       {imageUrl && (
         <div className="h-48 overflow-hidden">
-          <img 
-            src={imageUrl} 
-            alt={title} 
+          <img
+            src={imageUrl}
+            alt={title}
             className="w-full h-full object-cover transition-transform duration-500 ease-apple hover:scale-105"
           />
         </div>
@@ -101,11 +145,11 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
             onClick={handleFavorite}
             className="mt-0"
           >
-            <Heart 
+            <Heart
               className={cn(
-                "h-5 w-5 transition-all duration-300 ease-apple", 
+                "h-5 w-5 transition-all duration-300 ease-apple",
                 isFavorited ? "fill-destructive text-destructive" : "text-muted-foreground"
-              )} 
+              )}
             />
           </Button>
         </div>
@@ -120,8 +164,8 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
         <div className="text-sm text-muted-foreground">
           {duration} min
         </div>
-        <Button 
-          variant="secondary" 
+        <Button
+          variant="secondary"
           size="sm"
           onClick={handlePlayPause}
           className="transition-all duration-200 ease-apple flex items-center"

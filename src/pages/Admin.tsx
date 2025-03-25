@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,30 +17,193 @@ import {
   Settings,
   Search,
   ChevronDown,
-  HeartPulse
+  HeartPulse,
+  Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { db } from '../utils/firebase';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Cell
+} from 'recharts';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const MOCK_USERS = [
-  { id: '1', name: 'Sarah K.', email: 'sarah@example.com', role: 'member', status: 'active', streak: 45, joinDate: '2022-05-15' },
-  { id: '2', name: 'Michael T.', email: 'michael@example.com', role: 'member', status: 'active', streak: 30, joinDate: '2022-06-22' },
-  { id: '3', name: 'David W.', email: 'david@example.com', role: 'admin', status: 'active', streak: 120, joinDate: '2022-01-10' },
-  { id: '4', name: 'Emma J.', email: 'emma@example.com', role: 'member', status: 'inactive', streak: 0, joinDate: '2022-07-05' },
-  { id: '5', name: 'Thomas P.', email: 'thomas@example.com', role: 'member', status: 'active', streak: 15, joinDate: '2022-09-18' }
-];
+// Type for user data
+interface User {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: string;
+  status?: string;
+  streakDays?: number;
+  joinedAt?: Timestamp;
+  lastCheckIn?: Timestamp;
+}
 
-const MOCK_FLAGGED_CONTENT = [
-  { id: '1', content: 'Is there a way to access adult content without triggering...', user: 'Anonymous User', date: '2023-01-15', status: 'pending' },
-  { id: '2', content: 'I keep having thoughts about my ex and it\'s making me want to...', user: 'User5932', date: '2023-01-14', status: 'reviewed' }
+// Type for check-in time data
+interface CheckInTime {
+  day: string;
+  hour: number;
+  count: number;
+}
+
+// Type for flagged content
+interface FlaggedContent {
+  id: string;
+  user: string;
+  content: string;
+  date: string;
+  status: 'pending' | 'reviewed';
+}
+
+// Mock data for flagged content
+const MOCK_FLAGGED_CONTENT: FlaggedContent[] = [
+  {
+    id: '1',
+    user: 'John Doe',
+    content: 'This message contains potentially inappropriate content that has been flagged by our system.',
+    date: '2023-06-15T10:30:00',
+    status: 'pending'
+  },
+  {
+    id: '2',
+    user: 'Jane Smith',
+    content: 'Another message that was reported by community members for review.',
+    date: '2023-06-14T15:45:00',
+    status: 'reviewed'
+  },
+  {
+    id: '3',
+    user: 'Alex Johnson',
+    content: 'This comment was flagged for containing potential misinformation.',
+    date: '2023-06-13T09:15:00',
+    status: 'pending'
+  }
 ];
 
 const Admin: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [checkInTimes, setCheckInTimes] = useState<CheckInTime[]>([]);
+  const isMobile = useIsMobile();
   
-  const filteredUsers = MOCK_USERS.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        const usersRef = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersRef);
+        
+        const usersData: User[] = [];
+        
+        usersSnapshot.forEach((doc) => {
+          const userData = doc.data() as User;
+          
+          usersData.push({
+            id: doc.id,
+            name: userData.firstName && userData.lastName 
+              ? `${userData.firstName} ${userData.lastName}` 
+              : 'Unknown User',
+            email: userData.email || 'No email',
+            role: userData.role || 'member',
+            status: userData.lastCheckIn && isWithinLastWeek(userData.lastCheckIn) ? 'active' : 'inactive',
+            streakDays: userData.streakDays || 0,
+            joinedAt: userData.joinedAt,
+            lastCheckIn: userData.lastCheckIn
+          });
+        });
+        
+        setUsers(usersData);
+        processCheckInTimes(usersData);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUsers();
+  }, []);
+  
+  const isWithinLastWeek = (timestamp: Timestamp) => {
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    
+    return timestamp.toDate() > lastWeek;
+  };
+  
+  const processCheckInTimes = (userData: User[]) => {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const checkInData: Record<string, Record<number, number>> = {};
+    
+    dayNames.forEach(day => {
+      checkInData[day] = {};
+      for (let hour = 0; hour < 24; hour++) {
+        checkInData[day][hour] = 0;
+      }
+    });
+    
+    userData.forEach(user => {
+      if (user.lastCheckIn) {
+        const checkInDate = user.lastCheckIn.toDate();
+        const day = dayNames[checkInDate.getDay()];
+        const hour = checkInDate.getHours();
+        
+        checkInData[day][hour] = (checkInData[day][hour] || 0) + 1;
+      }
+    });
+    
+    const chartData: CheckInTime[] = [];
+    Object.entries(checkInData).forEach(([day, hours]) => {
+      Object.entries(hours).forEach(([hour, count]) => {
+        if (count > 0) {
+          chartData.push({
+            day,
+            hour: parseInt(hour),
+            count
+          });
+        }
+      });
+    });
+    
+    setCheckInTimes(chartData);
+  };
+  
+  const filteredUsers = users.filter(user => 
+    (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+    (user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
   );
+  
+  const getHourLabel = (hour: number) => {
+    const hourStr = hour % 12 || 12;
+    const ampm = hour < 12 ? 'AM' : 'PM';
+    return `${hourStr}${ampm}`;
+  };
+  
+  const getDayColor = (day: string) => {
+    const colors = {
+      'Monday': '#7dd3fc',
+      'Tuesday': '#a5b4fc',
+      'Wednesday': '#c4b5fd',
+      'Thursday': '#f0abfc',
+      'Friday': '#fda4af',
+      'Saturday': '#fda4af',
+      'Sunday': '#fb923c'
+    };
+    
+    return colors[day as keyof typeof colors] || '#a1a1aa';
+  };
   
   return (
     <motion.div 
@@ -77,6 +240,10 @@ const Admin: React.FC = () => {
           <TabsTrigger value="users" className="flex items-center">
             <Users className="mr-2 h-4 w-4" />
             Users
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center">
+            <Clock className="mr-2 h-4 w-4" />
+            Analytics
           </TabsTrigger>
           <TabsTrigger value="content" className="flex items-center">
             <HeartPulse className="mr-2 h-4 w-4" />
@@ -116,44 +283,167 @@ const Admin: React.FC = () => {
                   />
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium">Name</th>
-                        <th className="text-left py-3 px-4 font-medium">Email</th>
-                        <th className="text-left py-3 px-4 font-medium">Role</th>
-                        <th className="text-left py-3 px-4 font-medium">Status</th>
-                        <th className="text-left py-3 px-4 font-medium">Streak</th>
-                        <th className="text-left py-3 px-4 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map(user => (
-                        <tr key={user.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4">{user.name}</td>
-                          <td className="py-3 px-4">{user.email}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
-                              {user.role}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <CustomBadge variant={user.status === 'active' ? 'success' : 'secondary'}>
-                              {user.status}
-                            </CustomBadge>
-                          </td>
-                          <td className="py-3 px-4">{user.streak} days</td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">Edit</Button>
-                              <Button variant="ghost" size="sm" className="text-destructive">Suspend</Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                {isLoading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="animate-pulse-soft">
+                      <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    {filteredUsers.length > 0 ? (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-4 font-medium">Name</th>
+                            <th className="text-left py-3 px-4 font-medium">Email</th>
+                            <th className="text-left py-3 px-4 font-medium">Role</th>
+                            <th className="text-left py-3 px-4 font-medium">Status</th>
+                            <th className="text-left py-3 px-4 font-medium">Streak</th>
+                            <th className="text-left py-3 px-4 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredUsers.map(user => (
+                            <tr key={user.id} className="border-b hover:bg-muted/50">
+                              <td className="py-3 px-4">{user.name}</td>
+                              <td className="py-3 px-4">{user.email}</td>
+                              <td className="py-3 px-4">
+                                <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
+                                  {user.role}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4">
+                                <CustomBadge variant={user.status === 'active' ? 'success' : 'secondary'}>
+                                  {user.status}
+                                </CustomBadge>
+                              </td>
+                              <td className="py-3 px-4">{user.streakDays} days</td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <Button variant="ghost" size="sm">Edit</Button>
+                                  <Button variant="ghost" size="sm" className="text-destructive">Suspend</Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No users found matching your search criteria
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>User Check-in Analysis</CardTitle>
+                <CardDescription>
+                  Visualize when users are most active throughout the week
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[500px]">
+                  {checkInTimes.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={checkInTimes}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: isMobile ? 0 : 20,
+                          bottom: 100
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/40" />
+                        <XAxis 
+                          dataKey="day" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12 }}
+                          tickMargin={10}
+                          className="text-xs text-muted-foreground"
+                          angle={-45}
+                          textAnchor="end"
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12 }}
+                          tickMargin={10}
+                          className="text-xs text-muted-foreground"
+                          allowDecimals={false}
+                          label={{ value: 'Number of Check-ins', angle: -90, position: 'insideLeft', className: 'text-xs text-muted-foreground', dy: 50 }}
+                        />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-background border border-border shadow-lg rounded-md p-3 text-sm">
+                                  <p className="font-medium">{data.day}</p>
+                                  <p>
+                                    <span className="font-medium">{getHourLabel(data.hour)}</span>
+                                    <span className="ml-2">{data.count} check-ins</span>
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="count" 
+                          name="Check-ins"
+                          label={{ 
+                            position: 'top', 
+                            fill: 'var(--foreground)', 
+                            fontSize: 12,
+                            formatter: (value: number) => value > 0 ? value : '',
+                          }}
+                        >
+                          {checkInTimes.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={getDayColor(entry.day)} />
+                          ))}
+                        </Bar>
+                        <Legend 
+                          formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
+                          verticalAlign="bottom"
+                          height={36}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-muted-foreground">
+                        <p>No check-in data available</p>
+                        <p className="text-sm mt-2">Users need to check in for data to appear here</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 p-4 bg-muted/20 rounded-md text-sm">
+                  <h4 className="font-medium mb-2">About this chart</h4>
+                  <p className="text-muted-foreground">
+                    This visualization shows when users most frequently check in to the app throughout the week.
+                    Each bar represents the number of users checking in at that specific day and hour.
+                    This data can help you identify optimal times for sending notifications or scheduling maintenance.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -498,3 +788,4 @@ const Admin: React.FC = () => {
 };
 
 export default Admin;
+
