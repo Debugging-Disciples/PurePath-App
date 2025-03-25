@@ -327,6 +327,7 @@ export const updateStreakStart = async (userId: string, startDate: Date) => {
 
       await updateDoc(userRef, {
         streakDays: diffInDays > 0 ? diffInDays : 0, // Ensure streakDays is not negative
+        streakStart: Timestamp.fromDate(startDate)
       });
       
       return { success: true, message: 'Streak start updated successfully' };
