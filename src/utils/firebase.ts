@@ -154,7 +154,7 @@ export const register = async (email: string, password: string, username: string
       role: 'member', // Default role
       joinedAt: Timestamp.now(),
       streakDays: 0,
-      streakStart: Timestamp.now(),
+      streakStartDate: Timestamp.now(),
       lastCheckIn: Timestamp.now()
     });
     
@@ -327,7 +327,7 @@ export const updateStreakStart = async (userId: string, startDate: Date) => {
 
       await updateDoc(userRef, {
         streakDays: diffInDays > 0 ? diffInDays : 0, // Ensure streakDays is not negative
-        streakStart: Timestamp.fromDate(startDate)
+        streakStartDate: Timestamp.fromDate(startDate)
       });
       
       return { success: true, message: 'Streak start updated successfully' };
