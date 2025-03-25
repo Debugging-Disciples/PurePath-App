@@ -134,6 +134,13 @@ const Dashboard: React.FC = () => {
           });
         }
       }
+
+      if (!result.success && result.message === 'Invalid Date') {
+        toast.error("Invalid date selected", {
+          description: "Please select a valid date to start your streak.",
+        });
+      }
+
     } catch (error) {
       console.error('Error updating streak:', error);
       toast.error("Failed to set streak start date", {

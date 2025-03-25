@@ -318,14 +318,18 @@ export const updateStreakStart = async (userId: string, startDate: Date) => {
       const userData = userDoc.data();
       const lastCheckIn = userData.lastCheckIn?.toDate() || new Date(0);
 
-      const diffInMilliseconds = startDate.getTime() - lastCheckIn.getTime();
+      const diffInMilliseconds = lastCheckIn.getTime() - startDate.getTime();
       const diffInDays = Math.floor(diffInMilliseconds / (1000 * 60 * 60 * 24));
+
+      if (diffInDays < 0) {
+        return { success: false, message: 'Invalid Date' };
+      }
 
       await updateDoc(userRef, {
         streakDays: diffInDays > 0 ? diffInDays : 0, // Ensure streakDays is not negative
       });
       
-      return { success: true, diffInDays, message: 'Streak start updated successfully' };
+      return { success: true, message: 'Streak start updated successfully' };
     }
 
     return { success: false, message: 'User not found' };

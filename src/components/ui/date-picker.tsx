@@ -71,6 +71,11 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
                   selectedDate?.getDate() === day &&
                   selectedDate?.getMonth() === currentDate.getMonth() &&
                   selectedDate?.getFullYear() === currentDate.getFullYear(),
+              }, {
+                "hover:border-0 bg-primary/20": 
+                  new Date().getDate() === day && 
+                  new Date().getMonth() === currentDate.getMonth() && 
+                  new Date().getFullYear() === currentDate.getFullYear()
               }
             )}
             onClick={() => handleDateClick(day)}
