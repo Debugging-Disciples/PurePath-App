@@ -1,5 +1,6 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
@@ -58,7 +59,10 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
 
       for (let day = 1; day <= daysInCurrentMonth; day++) {
         days.push(
-          <div
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.01 * day }}
             key={day}
             className={cn(
               "grid-item place-self-center cursor-pointer rounded-lg w-[30px] h-[30px] flex items-center justify-center hover:bg-primary/30 transition-colors",
@@ -72,7 +76,7 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
             onClick={() => handleDateClick(day)}
           >
             {day}
-          </div>
+          </motion.div>
         );
       }
 
@@ -89,24 +93,47 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
         {...props}
       >
         <div className="flex flex-row items-center gap-2 mb-2">
-          <ChevronLeft
-            onClick={handlePrevMonth}
-            className="cursor-pointer rounded-md border-2 hover:bg-primary/30 hover:border-0 transition-colors"
-          />
-          <span className="flex text-lg font-bold text-center">
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.01 }}
+          >
+            <ChevronLeft
+              onClick={handlePrevMonth}
+              className="cursor-pointer rounded-md border-2 hover:bg-primary/30 hover:border-0 transition-colors"
+            />
+          </motion.div>
+          <motion.span 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.01 }}
+            className="flex text-lg font-bold text-center"
+          >
             {currentDate.toLocaleString("default", { month: "long" })}{" "}
             {currentDate.getFullYear()}
-          </span>
-          <ChevronRight
-            onClick={handleNextMonth}
-            className="cursor-pointer rounded-md border-2 hover:bg-primary/30 hover:border-0 transition-colors"
-          />
+          </motion.span>
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.01 }}
+          >
+            <ChevronRight
+              onClick={handleNextMonth}
+              className="cursor-pointer rounded-md border-2 hover:bg-primary/30 hover:border-0 transition-colors"
+            />
+          </motion.div>
         </div>
         <div className="h-full w-full grid grid-cols-7 gap-1 p-2">
           {["S", "M", "T", "W", "T", "F", "S"].map((date, index) => (
-            <div key={`${date}-${index}`} className="grid-item place-self-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.01 * index }}
+              className="grid-item place-self-center"
+              key={`${date}-${index}`} 
+            >
               {date}
-            </div>
+            </motion.div>
           ))}
           {renderDays()}
         </div>

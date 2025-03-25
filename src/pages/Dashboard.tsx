@@ -11,8 +11,7 @@ import {
   MessageCircle,
   Map,
   HeartPulse,
-  ArrowDown,
-  ArrowUp
+  CheckIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -185,7 +184,12 @@ const Dashboard: React.FC = () => {
           )}>
             {/* Current Streak Card - Check In Side */}
             {isCheckInSide ? (
-              <div>
+              <motion.div
+                key="check-in-side"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center">
                     <Trophy className="h-5 w-5 mr-2 text-primary" />
@@ -227,10 +231,15 @@ const Dashboard: React.FC = () => {
                     Edit Streak Start Date
                   </Button>
                 </CardFooter>
-              </div>
+              </motion.div>
             ) : (
               // Current Streak Card - Set Streak Start Date Side
-              <div>
+              <motion.div
+                key="streak-start-side"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center">
                     <Trophy className="h-5 w-5 mr-2 text-primary" />
@@ -241,7 +250,7 @@ const Dashboard: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-center py-6">
+                  <div className="flex items-center justify-center">
                     {/* calculate the streak start date to display in DatePicker */}
                     <DatePicker onDateChange={setSelectedDate} preselectedDate={new Date(Date.now() - streak * 24 * 60 * 60 * 1000)} />
                   </div>
@@ -251,7 +260,7 @@ const Dashboard: React.FC = () => {
                     onClick={handleStreakSet} 
                     className="w-full"
                   >
-                    Set Streak Start Date
+                    Set Streak Start Date <CheckIcon />
                   </Button>
                   <Button
                     variant="outline"
@@ -261,7 +270,7 @@ const Dashboard: React.FC = () => {
                     Cancel
                   </Button>
                 </CardFooter>
-              </div>
+              </motion.div>
             )}
           </Card>
         </motion.div>
