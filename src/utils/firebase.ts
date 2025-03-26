@@ -137,6 +137,7 @@ export const register = async (
       role: 'member', // Default role
       joinedAt: Timestamp.now(),
       streakDays: 0,
+      streakStartDate: Timestamp.now(),
       lastCheckIn: Timestamp.now()
     });
     
@@ -291,7 +292,38 @@ export const updateStreak = async (userId: string) => {
   }
 };
 
-// Log relapse - used for analytics
+export const updateStreakStart = async (userId: string, startDate: Date) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const lastCheckIn = userData.lastCheckIn?.toDate() || new Date(0);
+
+      const diffInMilliseconds = lastCheckIn.getTime() - startDate.getTime();
+      const diffInDays = Math.floor(diffInMilliseconds / (1000 * 60 * 60 * 24));
+
+      if (diffInDays < 0) {
+        return { success: false, message: 'Invalid Date' };
+      }
+
+      await updateDoc(userRef, {
+        streakDays: diffInDays > 0 ? diffInDays : 0, // Ensure streakDays is not negative
+        streakStartDate: Timestamp.fromDate(startDate)
+      });
+      
+      return { success: true, message: 'Streak start updated successfully' };
+    }
+
+    return { success: false, message: 'User not found' };
+  } catch (error) {
+    console.error('Error setting streak:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Log relapse with multiple triggers (used for analytics)
 interface LogRelapseResult {
   success: boolean;
   message?: string;
