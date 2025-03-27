@@ -12,7 +12,7 @@ import {
   MessageCircle,
   Map,
   HeartPulse,
-  CheckIcon
+  CheckIcon,
   HeartPulse,
   BookOpen
 } from 'lucide-react';
