@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,7 +23,13 @@ import ProgressChart from "@/components/ProgressChart";
 import { logRelapse, getUserProfile, getRelapseData } from "../utils/firebase";
 import { useAuth } from "../utils/auth";
 import { motion } from "framer-motion";
-import { AlertTriangle, Trophy, CalendarDays, TrendingUp, Check } from "lucide-react";
+import {
+  AlertTriangle,
+  Trophy,
+  CalendarDays,
+  TrendingUp,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
 import { db } from "../utils/firebase";
 import { collection, doc, getDoc } from "firebase/firestore";
@@ -36,7 +41,9 @@ const Analytics: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [selectedTrigger, setSelectedTrigger] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>([]);
+  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
+    []
+  );
   const [streakData, setStreakData] = useState<any[]>([]);
   const [moodData, setMoodData] = useState<any[]>([]);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -44,7 +51,7 @@ const Analytics: React.FC = () => {
   const [relapseStats, setRelapseStats] = useState({
     cleanDays: 0,
     relapseDays: 0,
-    netGrowth: 0
+    netGrowth: 0,
   });
 
   const useTriggers = (uid: string | undefined) => {
@@ -100,7 +107,7 @@ const Analytics: React.FC = () => {
         setRelapseStats({
           cleanDays: data.cleanDays,
           relapseDays: data.relapseDays,
-          netGrowth: data.cleanDays - data.relapseDays
+          netGrowth: data.cleanDays - data.relapseDays,
         });
       } catch (error) {
         console.error("Error fetching relapse data:", error);
@@ -125,9 +132,9 @@ const Analytics: React.FC = () => {
 
         setNotes("");
         setSelectedTrigger("");
-        
+
         // Redirect to journal page
-        navigate('/journal');
+        navigate("/journal");
       } else {
         toast.error("Failed to log relapse", {
           description: result.message,
@@ -301,26 +308,51 @@ const Analytics: React.FC = () => {
               <CardContent>
                 <div className="space-y-6">
                   <RelapseCalendar userId={currentUser?.uid} />
-                  
+
                   <div className="grid grid-cols-3 gap-4 mt-6">
                     <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
-                      <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Clean Days</h4>
-                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">{relapseStats.cleanDays}</p>
+                      <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                        Clean Days
+                      </h4>
+                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        {relapseStats.cleanDays}
+                      </p>
                     </div>
                     <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
-                      <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">Relapse Days</h4>
-                      <p className="text-2xl font-bold text-red-700 dark:text-red-300">{relapseStats.relapseDays}</p>
+                      <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">
+                        Relapse Days
+                      </h4>
+                      <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                        {relapseStats.relapseDays}
+                      </p>
                     </div>
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
-                      <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Net Growth</h4>
-                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{relapseStats.netGrowth}</p>
+                      <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
+                        Net Growth
+                      </h4>
+                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        {relapseStats.netGrowth}
+                      </p>
                     </div>
                   </div>
-                  
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Common Triggers</CardTitle>
+                <CardDescription>
+                  Understanding your patterns helps prevent relapses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
                   {hasNoTriggerData ? (
                     <div className="flex flex-col items-center justify-center py-8 bg-[#F2FCE2] rounded-lg">
                       <Check className="h-16 w-16 text-green-500 mb-2" />
-                      <p className="text-center text-muted-foreground">No trigger data yet</p>
+                      <p className="text-center text-muted-foreground">
+                        No trigger data yet
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-4 mt-6">
@@ -342,9 +374,7 @@ const Analytics: React.FC = () => {
                               animate={{
                                 width: `${
                                   (trigger.count /
-                                    Math.max(
-                                      ...Triggers.map((t) => t.count)
-                                    )) *
+                                    Math.max(...Triggers.map((t) => t.count))) *
                                   100
                                 }%`,
                               }}

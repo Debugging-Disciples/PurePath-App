@@ -100,7 +100,7 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
+      <div className="space-y-4 w-full">
         <h3 className="font-medium text-lg">Recovery Calendar</h3>
 
         {isLoading ? (
@@ -109,7 +109,7 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
           </div>
         ) : (
           <Card className="p-2">
-            <Calendar
+            <Calendar 
               mode="default"
               month={month}
               onMonthChange={setMonth}
