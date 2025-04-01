@@ -149,16 +149,6 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
                 relapse: "relapse-day",
                 clean: "clean-day"
               }}
-              styles={{
-                selected: {
-                  backgroundColor: "transparent",
-                  color: "var(--foreground)"
-                },
-                today: {
-                  fontWeight: "bold",
-                  border: "1px solid var(--primary)"
-                }
-              }}
             />
 
             <div className="flex justify-center gap-8 mt-4">
