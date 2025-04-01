@@ -108,13 +108,19 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
           </div>
         ) : (
-          <Card className="p-2">
+          <Card className="p-4 w-full">
             <Calendar 
               mode="default"
               month={month}
               onMonthChange={setMonth}
               selected={[]}
-              className="bg-card w-full"
+              className="w-full mx-auto"
+              styles={{
+                months: { width: '100%' },
+                month: { width: '100%' },
+                table: { width: '100%' },
+                day: { margin: '0 auto' }
+              }}
               components={{ DayContent: renderDay }}
               modifiers={modifiers}
               modifiersClassNames={{
