@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { format, subDays, differenceInDays, startOfDay, parseISO, isSameDay } from 'date-fns';
 
 // Define user profile interface
 export interface UserProfile {
@@ -38,6 +39,13 @@ export interface JournalEntry {
   notes: string;       // User's journal response
   level: number;       // Mood level (1-10)
   emotions: string[];  // Selected emotions
+}
+
+// Relapse interface
+export interface Relapse {
+  timestamp: Timestamp;
+  triggers: string;
+  notes?: string;
 }
 
 // Firebase configuration with provided credentials
@@ -340,12 +348,176 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
     };
 
     await updateDoc(userDocRef, {
-      relapses: arrayUnion(relapseObject) // Append the relapse object to the 'relapses' array
+      relapses: arrayUnion(relapseObject), // Append the relapse object to the 'relapses' array
+      streakDays: 0 // Reset streak when relapse is reported
     });
     return { success: true, message: 'Progress reset. Remember: every moment is a new opportunity.' };
   } catch (error) {
     console.error('Error logging relapse:', error);
     return { success: false, message: error.message };
+  }
+};
+
+// Get relapse data for analytics
+export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      return {
+        streakData: [],
+        moodData: [],
+        longestStreak: 0,
+        cleanDays: 0,
+        relapseDays: 0
+      };
+    }
+    
+    const userData = userDoc.data();
+    const joinDate = userData.joinedAt?.toDate() || new Date();
+    const relapses: Relapse[] = userData.relapses || [];
+    const journal = userData.journal || [];
+    
+    // Sort relapses by timestamp
+    const sortedRelapses = [...relapses].sort((a, b) => 
+      a.timestamp.toDate().getTime() - b.timestamp.toDate().getTime()
+    );
+    
+    // Determine the date range based on timeframe
+    let startDate = new Date();
+    const endDate = new Date();
+    
+    if (timeframe === 'weekly') {
+      startDate = subDays(endDate, 7);
+    } else if (timeframe === 'monthly') {
+      startDate = subDays(endDate, 30);
+    } else {
+      // All time - use join date
+      startDate = joinDate;
+    }
+    
+    // Calculate streaks between relapses or since join date
+    const streakData = [];
+    const moodData = [];
+    let currentDate = startOfDay(startDate);
+    const today = startOfDay(new Date());
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let cleanDays = 0;
+    let relapseDays = 0;
+    
+    // Process all days from start date to today
+    while (currentDate <= today) {
+      const formattedDate = format(currentDate, 'MMM d');
+      
+      // Check if this day had a relapse
+      const hadRelapse = sortedRelapses.some(relapse => {
+        const relapseDate = startOfDay(relapse.timestamp.toDate());
+        return isSameDay(relapseDate, currentDate);
+      });
+      
+      if (hadRelapse) {
+        // Relapse day - reset streak
+        streakData.push({ date: formattedDate, streak: 0 });
+        currentStreak = 0;
+        relapseDays++;
+      } else {
+        // Clean day - increase streak
+        currentStreak++;
+        cleanDays++;
+        streakData.push({ date: formattedDate, streak: currentStreak });
+        
+        // Update longest streak
+        if (currentStreak > longestStreak) {
+          longestStreak = currentStreak;
+        }
+      }
+      
+      // Find mood data from journal entries for this day
+      const journalEntry = journal.find(entry => {
+        const entryDate = entry.timestamp.toDate();
+        return isSameDay(entryDate, currentDate);
+      });
+      
+      // Add mood data if available, otherwise use neutral value
+      moodData.push({
+        date: formattedDate,
+        streak: hadRelapse ? 0 : currentStreak,
+        mood: journalEntry ? journalEntry.level : 5
+      });
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return {
+      streakData,
+      moodData,
+      longestStreak,
+      cleanDays,
+      relapseDays
+    };
+  } catch (error) {
+    console.error('Error getting relapse data:', error);
+    return {
+      streakData: [],
+      moodData: [],
+      longestStreak: 0,
+      cleanDays: 0,
+      relapseDays: 0
+    };
+  }
+};
+
+// Get user's relapse calendar data
+export const getRelapseCalendarData = async (userId: string) => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      return [];
+    }
+    
+    const userData = userDoc.data();
+    const joinDate = userData.joinedAt?.toDate() || new Date();
+    const relapses: Relapse[] = userData.relapses || [];
+    
+    // Sort relapses by timestamp
+    const sortedRelapses = [...relapses].sort((a, b) => 
+      a.timestamp.toDate().getTime() - b.timestamp.toDate().getTime()
+    );
+    
+    // Create data for each day since joining
+    const calendarData = [];
+    let currentDate = startOfDay(joinDate);
+    const today = startOfDay(new Date());
+    
+    while (currentDate <= today) {
+      // Check if this day had a relapse
+      const relapse = sortedRelapses.find(r => {
+        const relapseDate = startOfDay(r.timestamp.toDate());
+        return isSameDay(relapseDate, currentDate);
+      });
+      
+      calendarData.push({
+        date: new Date(currentDate),
+        hadRelapse: !!relapse,
+        relapseInfo: relapse ? {
+          triggers: relapse.triggers,
+          notes: relapse.notes || ''
+        } : null
+      });
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return calendarData;
+  } catch (error) {
+    console.error('Error getting relapse calendar data:', error);
+    return [];
   }
 };
 

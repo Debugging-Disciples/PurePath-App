@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,57 +21,31 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import ProgressChart from "@/components/ProgressChart";
-import { logRelapse } from "../utils/firebase";
+import { logRelapse, getUserProfile, getRelapseData } from "../utils/firebase";
 import { useAuth } from "../utils/auth";
 import { motion } from "framer-motion";
 import { AlertTriangle, Trophy, CalendarDays, TrendingUp, Check } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
 import { db } from "../utils/firebase";
 import { collection, doc, getDoc } from "firebase/firestore";
-
-const mockStreakData = [
-  { date: "Jan 1", streak: 1 },
-  { date: "Jan 2", streak: 2 },
-  { date: "Jan 3", streak: 3 },
-  { date: "Jan 4", streak: 4 },
-  { date: "Jan 5", streak: 5 },
-  { date: "Jan 6", streak: 6 },
-  { date: "Jan 7", streak: 7 },
-  { date: "Jan 8", streak: 8 },
-  { date: "Jan 9", streak: 0 }, // relapse
-  { date: "Jan 10", streak: 1 },
-  { date: "Jan 11", streak: 2 },
-  { date: "Jan 12", streak: 3 },
-  { date: "Jan 13", streak: 4 },
-  { date: "Jan 14", streak: 5 },
-];
-
-const mockMoodData = [
-  { date: "Jan 1", streak: 1, mood: 5 },
-  { date: "Jan 2", streak: 2, mood: 6 },
-  { date: "Jan 3", streak: 3, mood: 7 },
-  { date: "Jan 4", streak: 4, mood: 8 },
-  { date: "Jan 5", streak: 5, mood: 7 },
-  { date: "Jan 6", streak: 6, mood: 9 },
-  { date: "Jan 7", streak: 7, mood: 8 },
-  { date: "Jan 8", streak: 8, mood: 8 },
-  { date: "Jan 9", streak: 0, mood: 3 }, // relapse day
-  { date: "Jan 10", streak: 1, mood: 4 },
-  { date: "Jan 11", streak: 2, mood: 6 },
-  { date: "Jan 12", streak: 3, mood: 7 },
-  { date: "Jan 13", streak: 4, mood: 8 },
-  { date: "Jan 14", streak: 5, mood: 9 },
-];
+import RelapseCalendar from "@/components/RelapseCalendar";
 
 const Analytics: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
+  const navigate = useNavigate();
   const [notes, setNotes] = useState("");
   const [selectedTrigger, setSelectedTrigger] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
-    []
-  );
+  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>([]);
+  const [streakData, setStreakData] = useState<any[]>([]);
+  const [moodData, setMoodData] = useState<any[]>([]);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [chartTimeframe, setChartTimeframe] = useState("weekly");
+  const [relapseStats, setRelapseStats] = useState({
+    cleanDays: 0,
+    relapseDays: 0,
+    netGrowth: 0
+  });
 
   const useTriggers = (uid: string | undefined) => {
     useEffect(() => {
@@ -111,6 +87,29 @@ const Analytics: React.FC = () => {
     return triggers;
   };
 
+  // Fetch streak data based on relapse reports
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const fetchData = async () => {
+      try {
+        const data = await getRelapseData(currentUser.uid, chartTimeframe);
+        setStreakData(data.streakData);
+        setMoodData(data.moodData);
+        setLongestStreak(data.longestStreak);
+        setRelapseStats({
+          cleanDays: data.cleanDays,
+          relapseDays: data.relapseDays,
+          netGrowth: data.cleanDays - data.relapseDays
+        });
+      } catch (error) {
+        console.error("Error fetching relapse data:", error);
+      }
+    };
+
+    fetchData();
+  }, [currentUser, chartTimeframe]);
+
   const handleRelapseSubmit = async () => {
     if (!currentUser) return;
 
@@ -119,13 +118,16 @@ const Analytics: React.FC = () => {
     try {
       const result = await logRelapse(currentUser.uid, selectedTrigger, notes);
       if (result.success) {
-        toast.success("Progress reset", {
+        toast.success("Relapse reported", {
           description:
             "Remember that every moment is a new opportunity to begin again.",
         });
 
         setNotes("");
         setSelectedTrigger("");
+        
+        // Redirect to journal page
+        navigate('/journal');
       } else {
         toast.error("Failed to log relapse", {
           description: result.message,
@@ -146,15 +148,10 @@ const Analytics: React.FC = () => {
     ? userProfile.lastCheckIn.toDate()
     : new Date();
 
-  const longestStreak = Math.max(
-    ...mockStreakData.map((d) => d.streak),
-    currentStreak
-  );
-
   const Triggers = useTriggers(currentUser?.uid);
   const hasNoTriggerData = Triggers.length === 0;
 
-  function capitalize(val) {
+  function capitalize(val: string) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
   }
 
@@ -271,8 +268,20 @@ const Analytics: React.FC = () => {
             transition={{ duration: 0.4 }}
             className="space-y-6"
           >
-            <ProgressChart data={mockStreakData} type="streak" />
-            <ProgressChart data={mockMoodData} type="mood" />
+            <div className="flex justify-end mb-4">
+              <Select value={chartTimeframe} onValueChange={setChartTimeframe}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select timeframe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly (7 days)</SelectItem>
+                  <SelectItem value="monthly">Monthly (30 days)</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <ProgressChart data={streakData} type="streak" />
+            <ProgressChart data={moodData} type="mood" />
           </motion.div>
         </TabsContent>
 
@@ -284,20 +293,38 @@ const Analytics: React.FC = () => {
           >
             <Card>
               <CardHeader>
-                <CardTitle>Common Triggers</CardTitle>
+                <CardTitle>Recovery Journey</CardTitle>
                 <CardDescription>
-                  Understanding your patterns helps prevent relapses
+                  Visualize your progress and patterns over time
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
+                  <RelapseCalendar userId={currentUser?.uid} />
+                  
+                  <div className="grid grid-cols-3 gap-4 mt-6">
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                      <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Clean Days</h4>
+                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">{relapseStats.cleanDays}</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
+                      <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">Relapse Days</h4>
+                      <p className="text-2xl font-bold text-red-700 dark:text-red-300">{relapseStats.relapseDays}</p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                      <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Net Growth</h4>
+                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{relapseStats.netGrowth}</p>
+                    </div>
+                  </div>
+                  
                   {hasNoTriggerData ? (
                     <div className="flex flex-col items-center justify-center py-8 bg-[#F2FCE2] rounded-lg">
                       <Check className="h-16 w-16 text-green-500 mb-2" />
                       <p className="text-center text-muted-foreground">No trigger data yet</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 mt-6">
+                      <h3 className="font-medium text-lg">Common Triggers</h3>
                       {Triggers.map((trigger, index) => (
                         <div key={trigger.name} className="space-y-2">
                           <div className="flex justify-between items-center">
@@ -426,9 +453,7 @@ const Analytics: React.FC = () => {
                   onClick={handleRelapseSubmit}
                   disabled={isSubmitting || !selectedTrigger}
                 >
-                  {isSubmitting
-                    ? "Submitting..."
-                    : "Report Relapse & Reset Counter"}
+                  {isSubmitting ? "Submitting..." : "Report Relapse"}
                 </Button>
 
                 <p className="text-sm text-muted-foreground">
