@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -10,7 +11,7 @@ import {
   TrendingUp,
   MessageCircle,
   Map,
-  HeartPulse,
+  HeartPulse, // Remove the second HeartPulse import
   CheckIcon,
   BookOpen
 } from 'lucide-react';
