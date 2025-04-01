@@ -4,7 +4,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { getRelapseCalendarData } from '../utils/firebase';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card } from '@/components/ui/card';
-import { addMonths, format, startOfMonth, isSameDay, isSameMonth } from 'date-fns';
+import { isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
 import { DayContentProps } from 'react-day-picker';
 
@@ -24,7 +24,7 @@ interface DayInfo {
 const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
   const [calendarData, setCalendarData] = useState<DayInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [month, setMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,16 +46,6 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
 
     fetchData();
   }, [userId]);
-
-  // Navigate to previous month
-  const goToPrevMonth = () => {
-    setCurrentMonth(prevMonth => addMonths(prevMonth, -1));
-  };
-
-  // Navigate to next month
-  const goToNextMonth = () => {
-    setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
-  };
 
   // Custom day rendering with dots for relapse status
   const renderDay = (props: DayContentProps) => {
@@ -80,7 +70,7 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
         </TooltipTrigger>
         <TooltipContent>
           <div className="p-2">
-            <p className="font-bold">{format(day, 'MMMM d, yyyy')}</p>
+            <p className="font-bold">{new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(day)}</p>
             {dayData.hadRelapse ? (
               <div>
                 <p className="text-red-500">Relapse reported</p>
@@ -111,26 +101,7 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="font-medium text-lg">Recovery Calendar</h3>
-          <div className="flex gap-2">
-            <button 
-              onClick={goToPrevMonth}
-              className="p-1 rounded hover:bg-secondary"
-            >
-              ← Prev
-            </button>
-            <div className="font-medium">
-              {format(currentMonth, 'MMMM yyyy')}
-            </div>
-            <button 
-              onClick={goToNextMonth}
-              className="p-1 rounded hover:bg-secondary"
-            >
-              Next →
-            </button>
-          </div>
-        </div>
+        <h3 className="font-medium text-lg">Recovery Calendar</h3>
 
         {isLoading ? (
           <div className="flex justify-center py-8">
@@ -140,9 +111,10 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
           <Card className="p-2">
             <Calendar
               mode="default"
-              month={currentMonth}
+              month={month}
+              onMonthChange={setMonth}
               selected={[]}
-              className="bg-card"
+              className="bg-card w-full"
               components={{ DayContent: renderDay }}
               modifiers={modifiers}
               modifiersClassNames={{

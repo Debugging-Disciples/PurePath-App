@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -5,14 +6,6 @@ import L from 'leaflet';
 import { getCommunityLocations } from '../utils/firebase';
 import { cn } from '@/lib/utils';
 import { countries, usStates } from '@/utils/locationData';
-
-// // Fix Leaflet marker icon issue
-// delete (L.Icon.Default.prototype)._getIconUrl;
-// L.Icon.Default.mergeOptions({
-//   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-//   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-//   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-// });
 
 // Custom marker icon
 const customIcon = new L.Icon({
@@ -42,11 +35,10 @@ const countryCoordinates: Record<string, [number, number]> = {
   'in': [20.5937, 78.9629], // India
   'br': [-14.2350, -51.9253], // Brazil
   'mx': [23.6345, -102.5528], // Mexico
-  // Default for other countries
-  'default': [0, 0]
+  // Default for other countries - don't display these
 };
 
-// US states approximate coordinates
+// Updated and corrected US states approximate coordinates
 const stateCoordinates: Record<string, [number, number]> = {
   'AL': [32.7794, -86.8287],
   'AK': [64.0685, -152.2782],
@@ -58,8 +50,47 @@ const stateCoordinates: Record<string, [number, number]> = {
   'DE': [38.9896, -75.5050],
   'FL': [27.9944, -81.7603],
   'GA': [32.6415, -83.4426],
-  // ... other states can be added similarly
-  'default': [39.8333, -98.5833] // Center of US roughly
+  'HI': [19.8968, -155.5828],
+  'ID': [44.0682, -114.7420],
+  'IL': [40.0417, -89.1965],
+  'IN': [39.8942, -86.2816],
+  'IA': [42.0751, -93.4960],
+  'KS': [38.5111, -96.8005],
+  'KY': [37.6690, -84.6514],
+  'LA': [31.1801, -91.8749],
+  'ME': [45.2538, -69.4455],
+  'MD': [39.0458, -76.6413],
+  'MA': [42.4072, -71.3824],
+  'MI': [44.3148, -85.6024],
+  'MN': [46.7296, -94.6859],
+  'MS': [32.7416, -89.6787],
+  'MO': [38.4561, -92.2884],
+  'MT': [46.9219, -110.4544],
+  'NE': [41.4925, -99.9018],
+  'NV': [38.8026, -116.4194],
+  'NH': [43.1939, -71.5724],
+  'NJ': [40.0583, -74.4057],
+  'NM': [34.5199, -105.8701],
+  'NY': [42.1657, -74.9481],
+  'NC': [35.6301, -79.8064],
+  'ND': [47.5515, -101.0020],
+  'OH': [40.4173, -82.9071],
+  'OK': [35.5653, -96.9289],
+  'OR': [44.5720, -122.0709],
+  'PA': [40.5908, -77.2098],
+  'RI': [41.6809, -71.5118],
+  'SC': [33.8569, -80.9450],
+  'SD': [44.2998, -99.4388],
+  'TN': [35.7478, -86.6923],
+  'TX': [31.0545, -97.5635],
+  'UT': [39.3210, -111.0937],
+  'VT': [44.5588, -72.5778],
+  'VA': [37.7693, -78.1700],
+  'WA': [47.4009, -121.4905],
+  'WV': [38.5976, -80.4549],
+  'WI': [43.7844, -88.7879],
+  'WY': [43.0759, -107.2903],
+  'DC': [38.9072, -77.0369]
 };
 
 const CommunityMap: React.FC<CommunityMapProps> = ({ className }) => {
@@ -69,41 +100,53 @@ const CommunityMap: React.FC<CommunityMapProps> = ({ className }) => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
+        setIsLoading(true);
         const communityLocations = await getCommunityLocations();
         
         // Transform country/state data to map coordinates
-        const formattedLocations = communityLocations.map(item => {
-          const countryCode = item.location.country;
-          const stateCode = item.location.state;
-          
-          // Get the country name for display
-          const countryObj = countries.find(c => c.value === countryCode);
-          let displayName = countryObj?.label || 'Unknown Country';
-          
-          // If it's US and has a state, use state coordinates and add state to display name
-          let coordinates: [number, number] = countryCoordinates[countryCode] || countryCoordinates.default;
-          
-          if (countryCode === 'us' && stateCode) {
-            coordinates = stateCoordinates[stateCode] || stateCoordinates.default;
-            const stateObj = usStates.find(s => s.value === stateCode);
-            if (stateObj) {
-              displayName = `${displayName}, ${stateObj.label}`;
+        const formattedLocations = communityLocations
+          .filter(item => {
+            // Filter out "other" country selections
+            return item.location.country !== 'other';
+          })
+          .map(item => {
+            const countryCode = item.location.country;
+            const stateCode = item.location.state;
+            
+            // Skip if country is not in our coordinates list
+            if (!countryCoordinates[countryCode]) {
+              return null;
             }
-          }
-          
-          // Add a small random offset for privacy and to prevent markers from overlapping
-          const randomOffset = () => (Math.random() - 0.5) * 2;
-          coordinates = [
-            coordinates[0] + randomOffset(), 
-            coordinates[1] + randomOffset()
-          ];
-          
-          return {
-            id: item.id,
-            coordinates,
-            displayName
-          };
-        });
+            
+            // Get the country name for display
+            const countryObj = countries.find(c => c.value === countryCode);
+            let displayName = countryObj?.label || 'Unknown Country';
+            
+            // If it's US and has a state, use state coordinates and add state to display name
+            let coordinates: [number, number] = countryCoordinates[countryCode];
+            
+            if (countryCode === 'us' && stateCode && stateCoordinates[stateCode]) {
+              coordinates = stateCoordinates[stateCode];
+              const stateObj = usStates.find(s => s.value === stateCode);
+              if (stateObj) {
+                displayName = `${displayName}, ${stateObj.label}`;
+              }
+            }
+            
+            // Add a small random offset for privacy and to prevent markers from overlapping
+            const randomOffset = () => (Math.random() - 0.5) * 1.5;
+            coordinates = [
+              coordinates[0] + randomOffset(), 
+              coordinates[1] + randomOffset()
+            ];
+            
+            return {
+              id: item.id,
+              coordinates,
+              displayName
+            };
+          })
+          .filter(item => item !== null) as Array<{ id: string; coordinates: [number, number]; displayName: string }>;
         
         setLocations(formattedLocations);
       } catch (error) {
