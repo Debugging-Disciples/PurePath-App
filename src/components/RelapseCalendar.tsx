@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Card } from '@/components/ui/card';
 import { addMonths, format, startOfMonth, isSameDay, isSameMonth } from 'date-fns';
 import { motion } from 'framer-motion';
+import { DayContentProps } from 'react-day-picker';
 
 interface RelapseCalendarProps {
   userId?: string;
@@ -57,7 +58,9 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
   };
 
   // Custom day rendering with dots for relapse status
-  const renderDay = (day: Date) => {
+  const renderDay = (props: DayContentProps) => {
+    const day = props.date;
+    
     // Find data for this day
     const dayData = calendarData.find(d => isSameDay(d.date, day));
     
@@ -147,11 +150,11 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
                 clean: "clean-day"
               }}
               styles={{
-                day_selected: {
+                selected: {
                   backgroundColor: "transparent",
                   color: "var(--foreground)"
                 },
-                day_today: {
+                today: {
                   fontWeight: "bold",
                   border: "1px solid var(--primary)"
                 }

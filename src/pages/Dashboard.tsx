@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -13,7 +12,6 @@ import {
   Map,
   HeartPulse,
   CheckIcon,
-  HeartPulse,
   BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -123,7 +121,6 @@ const Dashboard: React.FC = () => {
       const result = await updateStreakStart(currentUser.uid, selectedDate);
       
       if (result.success) {
-        // Refresh user data
         const updatedProfile = await getUserProfile(currentUser.uid);
         
         if (updatedProfile) {
@@ -190,7 +187,6 @@ const Dashboard: React.FC = () => {
             "border-primary/20 h-full",
             streak > 0 && "bg-gradient-to-br from-primary/10 to-transparent"
           )}>
-            {/* Current Streak Card - Check In Side */}
             {isCheckInSide ? (
               <motion.div
                 key="check-in-side"
@@ -241,7 +237,6 @@ const Dashboard: React.FC = () => {
                 </CardFooter>
               </motion.div>
             ) : (
-              // Current Streak Card - Set Streak Start Date Side
               <motion.div
                 key="streak-start-side"
                 initial={{ opacity: 0 }}
@@ -259,7 +254,6 @@ const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-center">
-                    {/* calculate the streak start date to display in DatePicker */}
                     <DatePicker onDateChange={setSelectedDate} preselectedDate={new Date(Date.now() - streak * 24 * 60 * 60 * 1000)} />
                   </div>
                 </CardContent>
