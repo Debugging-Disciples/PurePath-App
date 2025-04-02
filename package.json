@@ -47,7 +47,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.3.0",
+    "embla-carousel-react": "^8.5.2",
     "firebase": "^10.9.0",
     "framer-motion": "^11.2.10",
     "input-otp": "^1.2.4",
