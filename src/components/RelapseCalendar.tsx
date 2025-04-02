@@ -119,7 +119,10 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
                 months: { width: '100%' },
                 month: { width: '100%' },
                 table: { width: '100%' },
-                day: { margin: '0 auto' }
+                row: { width: '100%', display: 'flex', justifyContent: 'space-between' },
+                cell: { width: 'calc(100% / 7)', margin: '0', padding: '2px' },
+                head_row: { width: '100%', display: 'flex', justifyContent: 'space-between' },
+                head_cell: { width: 'calc(100% / 7)', textAlign: 'center' }
               }}
               components={{ DayContent: renderDay }}
               modifiers={modifiers}
