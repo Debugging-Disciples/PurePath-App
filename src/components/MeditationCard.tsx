@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Play, Pause, Heart, Volume2, VolumeX } from 'lucide-react';
@@ -18,7 +17,7 @@ import { db } from '@/utils/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { Slider } from '@/components/ui/slider';
 
-interface MeditationCardProps {
+export interface MeditationCardProps {
   id: string;
   title: string;
   description: string;
@@ -27,7 +26,7 @@ interface MeditationCardProps {
   favorite: boolean;
   imageUrl?: string;
   audioUrl?: string;
-  type?: 'meditation' | 'breathing' | 'prayer' | 'devotional';
+  type?: 'meditation' | 'breathing' | 'prayer' | 'devotional' | string;
   className?: string;
 }
 
@@ -56,7 +55,6 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   
   const { currentUser } = useAuth();
 
-  // Set up audio element if audioUrl is provided
   useEffect(() => {
     if (audioUrl) {
       audioRef.current = new Audio(audioUrl);
@@ -87,14 +85,12 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
     fetchFavoriteStatus();
   }, [currentUser, id]);
 
-  // Update audio volume when volume state changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
 
-  // Handle play/pause for both timer and audio
   const handlePlayPause = () => {
     if (isPlaying) {
       setIsPlaying(false);
@@ -103,17 +99,15 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
     } else {
       setIsPlaying(true);
       
-      // Start audio if available
       if (audioRef.current) {
         audioRef.current.currentTime = elapsedTime;
         audioRef.current.play().catch(error => {
           console.error("Audio playback error:", error);
-          // Fall back to timer-only mode if audio fails
         });
       }
       
       const totalSeconds = duration * 60;
-      const incrementPerInterval = 100 / (totalSeconds / 0.1); // Update every 100ms
+      const incrementPerInterval = 100 / (totalSeconds / 0.1);
 
       intervalRef.current = setInterval(() => {
         setProgress(prev => {
@@ -177,9 +171,9 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  // Get the appropriate badge color based on meditation type
   const getBadgeVariant = () => {
-    switch (type) {
+    const typeStr = String(type).toLowerCase();
+    switch (typeStr) {
       case 'breathing':
         return 'secondary';
       case 'prayer':
