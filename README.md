@@ -1,10 +1,7 @@
 
-
 # PurePath
 
 PurePath is a web application designed to help users break free from unwanted habits like PMO and build a life of purpose through community support, guided meditations, and progress tracking.
-
-
 
 ## Tech Stack
 
@@ -23,12 +20,18 @@ This project is built with modern web technologies:
 
 ## Features
 
-- 🔒 **Secure Authentication**: User account creation and login
-- 📊 **Progress Analytics**: Track your journey with visual analytics
-- 🧘 **Guided Meditations**: Access specialized meditations and journal prompts 
-- 🆘 **Emergency Support**: Panic button for immediate help
-- 🌍 **Global Community**: Connect with others on the same journey
-
+- 🔒 **User Authentication**: Secure login and account management
+- 📈 **Habit Tracking**: Monitor your progress with streak tracking and daily check-ins
+- ✅ **Daily Tasks**: Complete guided activities to stay on track and build positive habits
+- 🧘 **Mindfulness Resources**: Access specialized meditations, breathing exercises, and visualizations
+- 📝 **Journal**: Document your journey with guided prompts and reflections
+- 🌊 **Urge Management**: Tools like "urge surfing" to navigate difficult moments
+- 🌍 **Community Support**: Connect with others on the same journey through chat and global map
+- 📊 **Visual Analytics**: Track your progress with detailed statistics and charts
+- 🆘 **Emergency Support**: Get immediate help during moments of weakness
+- 📱 **Responsive Design**: Seamlessly use the app across all devices
+- 🎯 **Daily Scripture**: Find inspiration in daily Bible verses
+- 🔄 **Customizable Dashboard**: Personalize your experience with the tools you need most
 
 ## Contributing
 
@@ -39,7 +42,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
 
 ## Getting Started
 

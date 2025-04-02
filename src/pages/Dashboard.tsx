@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -24,6 +25,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import VerseSlideshow from '@/components/VerseSlideshow';
 import DatePicker from '@/components/ui/date-picker';
+import DailyTasks from '@/components/DailyTasks';
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('en-US', { 
@@ -177,6 +179,11 @@ const Dashboard: React.FC = () => {
         </motion.p>
       </div>
       
+      {/* Daily verse slideshow - NEW SECTION */}
+      <div className="mb-8">
+        <VerseSlideshow className="rounded-xl shadow-sm" />
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -262,7 +269,7 @@ const Dashboard: React.FC = () => {
                     onClick={handleStreakSet} 
                     className="w-full"
                   >
-                    Set Streak Start Date <CheckIcon />
+                    Set Streak Start Date <CheckIcon className="ml-2 h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
@@ -330,24 +337,35 @@ const Dashboard: React.FC = () => {
           </Card>
         </motion.div>
         
+        {/* Replace emergency card with daily tasks */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <Card className="h-full flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-destructive">Emergency Support</CardTitle>
-              <CardDescription>
-                Need immediate help? Click below
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex items-center">
-              <PanicButton className="w-full" />
-            </CardContent>
-          </Card>
+          <DailyTasks />
         </motion.div>
       </div>
+      
+      {/* Move emergency support below the cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="mb-8"
+      >
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="text-destructive">Emergency Support</CardTitle>
+            <CardDescription>
+              Need immediate help? Click below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PanicButton className="w-full" />
+          </CardContent>
+        </Card>
+      </motion.div>
       
       <div className="mb-8">
         <Tabs defaultValue="meditations">
@@ -393,11 +411,6 @@ const Dashboard: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-      
-      <div className="glass-card rounded-lg p-6 text-center">
-        <h3 className="text-xl font-medium mb-3">Daily Inspiration</h3>
-        <VerseSlideshow />
       </div>
     </motion.div>
   );
