@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react'; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import MeditationCard from '@/components/MeditationCard';
+import BreathingExerciseCard from '@/components/BreathingExerciseCard';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
 import { useAuth } from '@/utils/auth'; 
@@ -57,7 +57,7 @@ const MEDITATIONS_DATA = [
         category: 'Intermediate',
         favorite: false,
         type: 'meditation',
-        imageUrl: 'https://images.unsplash.com/photo-1519834556553-597c23b0a9c5?auto=format&fit=crop&q=80&w=500',
+        imageUrl: 'https://images.unsplash.com/photo-1519834556553-a080ee817e1f?auto=format&fit=crop&q=80&w=500',
         audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-spirit-of-the-woods-544.mp3',
         tags: ['emotions', 'awareness', 'intermediate']
     },
@@ -69,7 +69,7 @@ const MEDITATIONS_DATA = [
         category: 'Compassion',
         favorite: false,
         type: 'meditation',
-        imageUrl: 'https://images.unsplash.com/photo-1518002171953-a080ee817e1f?auto=format&fit=crop&q=80&w=500',
+        imageUrl: 'https://images.unsplash.com/photo-1518002171953-8e4385a41802?auto=format&fit=crop&q=80&w=500',
         audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-peaceful-morning-light-554.mp3',
         tags: ['compassion', 'kindness', 'healing']
     },
@@ -85,7 +85,6 @@ const MEDITATIONS_DATA = [
         audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-a-simple-meditation-fluid-3127.mp3',
         tags: ['sleep', 'evening', 'relaxation']
     },
-    // New breathing exercises
     {
         id: '7',
         title: 'Balloon Breathing',
@@ -96,7 +95,10 @@ const MEDITATIONS_DATA = [
         type: 'breathing',
         imageUrl: 'https://images.unsplash.com/photo-1586034679970-cb7b5fc4928a?auto=format&fit=crop&q=80&w=500',
         audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-relaxed-morning-wake-up-piano-2942.mp3',
-        tags: ['breathing', 'anxiety', 'stress-relief']
+        tags: ['breathing', 'anxiety', 'stress-relief'],
+        breathInDuration: 4,
+        holdDuration: 4,
+        breathOutDuration: 6
     },
     {
         id: '8',
@@ -110,7 +112,6 @@ const MEDITATIONS_DATA = [
         audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-ambient-space-2125.mp3',
         tags: ['breathing', 'sleep', 'anxiety']
     },
-    // Prayer content
     {
         id: '9',
         title: 'Serenity Prayer',
@@ -135,7 +136,6 @@ const MEDITATIONS_DATA = [
         audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-gentle-morning-light-554.mp3',
         tags: ['prayer', 'strength', 'temptation']
     },
-    // Devotional content
     {
         id: '11',
         title: 'Daily Scripture',
@@ -224,6 +224,24 @@ const Meditations: React.FC = () => {
     meditationsByType[type].push(meditation);
   });
 
+  // Function to render the appropriate card component based on meditation type
+  const renderMeditationCard = (meditation: any, index: number, delay: number = 0) => {
+    return (
+      <motion.div
+        key={meditation.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: delay + (index * 0.05) }}
+      >
+        {meditation.type === 'breathing' ? (
+          <BreathingExerciseCard {...meditation} />
+        ) : (
+          <MeditationCard {...meditation} />
+        )}
+      </motion.div>
+    );
+  };
+
   return (
     <motion.div
       className="container max-w-6xl py-8 pb-16"
@@ -263,16 +281,9 @@ const Meditations: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMeditations.map((meditation, index) => (
-                <motion.div
-                  key={meditation.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <MeditationCard {...meditation} />
-                </motion.div>
-              ))}
+              {filteredMeditations.map((meditation, index) => 
+                renderMeditationCard(meditation, index)
+              )}
             </div>
           )}
         </div>
@@ -298,16 +309,9 @@ const Meditations: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {meditations.map((meditation, index) => (
-                    <motion.div
-                      key={meditation.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: (typeIndex * 0.1) + (index * 0.05) }}
-                    >
-                      <MeditationCard {...meditation} />
-                    </motion.div>
-                  ))}
+                  {meditations.map((meditation, index) => 
+                    renderMeditationCard(meditation, index, typeIndex * 0.1)
+                  )}
                 </div>
               </div>
             ))}
@@ -315,61 +319,33 @@ const Meditations: React.FC = () => {
 
           <TabsContent value="meditation">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MEDITATIONS_DATA.filter(m => m.type === 'meditation').map((meditation, index) => (
-                <motion.div
-                  key={meditation.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <MeditationCard {...meditation} />
-                </motion.div>
-              ))}
+              {MEDITATIONS_DATA.filter(m => m.type === 'meditation').map((meditation, index) => 
+                renderMeditationCard(meditation, index)
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="breathing">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MEDITATIONS_DATA.filter(m => m.type === 'breathing').map((meditation, index) => (
-                <motion.div
-                  key={meditation.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <MeditationCard {...meditation} />
-                </motion.div>
-              ))}
+              {MEDITATIONS_DATA.filter(m => m.type === 'breathing').map((meditation, index) => 
+                renderMeditationCard(meditation, index)
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="prayer">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MEDITATIONS_DATA.filter(m => m.type === 'prayer').map((meditation, index) => (
-                <motion.div
-                  key={meditation.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <MeditationCard {...meditation} />
-                </motion.div>
-              ))}
+              {MEDITATIONS_DATA.filter(m => m.type === 'prayer').map((meditation, index) => 
+                renderMeditationCard(meditation, index)
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="devotional">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MEDITATIONS_DATA.filter(m => m.type === 'devotional').map((meditation, index) => (
-                <motion.div
-                  key={meditation.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                >
-                  <MeditationCard {...meditation} />
-                </motion.div>
-              ))}
+              {MEDITATIONS_DATA.filter(m => m.type === 'devotional').map((meditation, index) => 
+                renderMeditationCard(meditation, index)
+              )}
             </div>
           </TabsContent>
 
@@ -381,16 +357,9 @@ const Meditations: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favoriteMeditations.map((meditation, index) => (
-                  <motion.div
-                    key={meditation.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.05 }}
-                  >
-                    <MeditationCard {...meditation} />
-                  </motion.div>
-                ))}
+                {favoriteMeditations.map((meditation, index) => 
+                  renderMeditationCard(meditation, index)
+                )}
               </div>
             )}
           </TabsContent>

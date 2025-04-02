@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Play, Pause, Heart, Volume2, VolumeX } from 'lucide-react';
@@ -16,6 +17,7 @@ import { useAuth } from '@/utils/auth';
 import { db } from '@/utils/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { Slider } from '@/components/ui/slider';
+import { toast } from 'sonner';
 
 export interface MeditationCardProps {
   id: string;
@@ -28,6 +30,10 @@ export interface MeditationCardProps {
   audioUrl?: string;
   type?: 'meditation' | 'breathing' | 'prayer' | 'devotional' | string;
   className?: string;
+  tags?: string[];
+  breathInDuration?: number;
+  holdDuration?: number;
+  breathOutDuration?: number;
 }
 
 const MeditationCard: React.FC<MeditationCardProps> = ({
@@ -49,6 +55,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
+  const [audioLoaded, setAudioLoaded] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -60,9 +67,25 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
       audioRef.current = new Audio(audioUrl);
       audioRef.current.volume = volume;
       
+      // Add event listeners for better error handling
+      audioRef.current.addEventListener('canplaythrough', () => {
+        console.log('Audio can play through');
+        setAudioLoaded(true);
+      });
+      
+      audioRef.current.addEventListener('error', (e) => {
+        console.error('Audio loading error:', e);
+        toast.error('Could not load audio. Please try again.');
+      });
+      
+      // Preload the audio
+      audioRef.current.load();
+      
       return () => {
         if (audioRef.current) {
           audioRef.current.pause();
+          audioRef.current.removeEventListener('canplaythrough', () => {});
+          audioRef.current.removeEventListener('error', () => {});
           audioRef.current.src = "";
         }
       };
@@ -101,9 +124,17 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
       
       if (audioRef.current) {
         audioRef.current.currentTime = elapsedTime;
-        audioRef.current.play().catch(error => {
-          console.error("Audio playback error:", error);
-        });
+        // Log before play attempt to help with debugging
+        console.log('Attempting to play audio:', audioUrl);
+        
+        audioRef.current.play()
+          .then(() => {
+            console.log('Audio playing successfully');
+          })
+          .catch(error => {
+            console.error("Audio playback error:", error);
+            toast.error('Could not play audio. Please try again or check browser settings.');
+          });
       }
       
       const totalSeconds = duration * 60;
