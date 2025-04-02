@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { format, subDays, differenceInDays, startOfDay, parseISO, isSameDay } from 'date-fns';
+import { format, subDays, differenceInDays, startOfDay, parseISO, isSameDay, addDays } from 'date-fns';
 
 // Define user profile interface
 export interface UserProfile {
@@ -358,7 +358,7 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
   }
 };
 
-// Get relapse data for analytics
+// Get relapse data for analytics with enhanced longest streak calculation
 export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
   try {
     const userDocRef = doc(db, 'users', userId);
@@ -407,6 +407,9 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
     let cleanDays = 0;
     let relapseDays = 0;
     
+    // Calculate historical longest streak (from join date)
+    const historicalLongestStreak = calculateLongestStreak(joinDate, sortedRelapses);
+    
     // Process all days from start date to today
     while (currentDate <= today) {
       const formattedDate = format(currentDate, 'MMM d');
@@ -428,7 +431,7 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
         cleanDays++;
         streakData.push({ date: formattedDate, streak: currentStreak });
         
-        // Update longest streak
+        // Update longest streak for selected timeframe
         if (currentStreak > longestStreak) {
           longestStreak = currentStreak;
         }
@@ -454,9 +457,10 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
     return {
       streakData,
       moodData,
-      longestStreak,
+      longestStreak: historicalLongestStreak, // Use the all-time longest streak
       cleanDays,
-      relapseDays
+      relapseDays,
+      netGrowth: cleanDays - relapseDays
     };
   } catch (error) {
     console.error('Error getting relapse data:', error);
@@ -465,9 +469,41 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
       moodData: [],
       longestStreak: 0,
       cleanDays: 0,
-      relapseDays: 0
+      relapseDays: 0,
+      netGrowth: 0
     };
   }
+};
+
+// Calculate longest streak between relapses since join date
+export const calculateLongestStreak = (joinDate: Date, sortedRelapses: Relapse[]): number => {
+  if (sortedRelapses.length === 0) {
+    // If no relapses, the streak is from join date until today
+    return differenceInDays(new Date(), joinDate);
+  }
+
+  let longestStreak = 0;
+  let lastRelapseDate = startOfDay(joinDate);
+  
+  // Check streaks between relapses
+  for (const relapse of sortedRelapses) {
+    const relapseDate = startOfDay(relapse.timestamp.toDate());
+    const streakDays = differenceInDays(relapseDate, lastRelapseDate);
+    
+    if (streakDays > longestStreak) {
+      longestStreak = streakDays;
+    }
+    
+    lastRelapseDate = relapseDate;
+  }
+  
+  // Check current streak (from last relapse until today)
+  const currentStreak = differenceInDays(new Date(), lastRelapseDate);
+  if (currentStreak > longestStreak) {
+    longestStreak = currentStreak;
+  }
+  
+  return longestStreak;
 };
 
 // Get user's relapse calendar data

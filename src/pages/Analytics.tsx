@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import ProgressChart from "@/components/ProgressChart";
-import { logRelapse, getUserProfile, getRelapseData } from "../utils/firebase";
+import { logRelapse, getUserProfile, getRelapseData, calculateLongestStreak } from "../utils/firebase";
 import { useAuth } from "../utils/auth";
 import { motion } from "framer-motion";
 import {
@@ -94,7 +94,6 @@ const Analytics: React.FC = () => {
     return triggers;
   };
 
-  // Fetch streak data based on relapse reports
   useEffect(() => {
     if (!currentUser?.uid) return;
 
@@ -107,7 +106,7 @@ const Analytics: React.FC = () => {
         setRelapseStats({
           cleanDays: data.cleanDays,
           relapseDays: data.relapseDays,
-          netGrowth: data.cleanDays - data.relapseDays,
+          netGrowth: data.netGrowth || data.cleanDays - data.relapseDays,
         });
       } catch (error) {
         console.error("Error fetching relapse data:", error);
@@ -133,7 +132,6 @@ const Analytics: React.FC = () => {
         setNotes("");
         setSelectedTrigger("");
 
-        // Redirect to journal page
         navigate("/journal");
       } else {
         toast.error("Failed to log relapse", {
