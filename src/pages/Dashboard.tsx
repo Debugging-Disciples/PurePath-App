@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -25,7 +24,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import VerseSlideshow from '@/components/VerseSlideshow';
 import DatePicker from '@/components/ui/date-picker';
-import DailyTodoList from '@/components/DailyTodoList';
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('en-US', { 
@@ -160,7 +158,7 @@ const Dashboard: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="mb-6">
+      <div className="mb-8">
         <motion.h1 
           className="text-3xl font-bold mb-2"
           initial={{ opacity: 0, y: -20 }}
@@ -177,17 +175,6 @@ const Dashboard: React.FC = () => {
         >
           {formatDate(new Date())} • Keep moving forward
         </motion.p>
-      </div>
-      
-      {/* New Daily Refresh Section */}
-      <div className="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="md:col-span-3">
-          <VerseSlideshow />
-        </div>
-        
-        <div className="md:col-span-2">
-          <DailyTodoList />
-        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -406,6 +393,11 @@ const Dashboard: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
+      </div>
+      
+      <div className="glass-card rounded-lg p-6 text-center">
+        <h3 className="text-xl font-medium mb-3">Daily Inspiration</h3>
+        <VerseSlideshow />
       </div>
     </motion.div>
   );
