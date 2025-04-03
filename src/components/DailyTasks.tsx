@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Circle } from 'lucide-react';
@@ -210,10 +211,12 @@ const DailyTasks: React.FC<DailyTasksProps> = ({ className }) => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="ml-2" 
-                onClick={() => window.location.href = task.link}
+                className="ml-2"
+                asChild
               >
-                Go
+                <Link to={task.link}>
+                  Go
+                </Link>
               </Button>
             </div>
           ))}
@@ -224,3 +227,4 @@ const DailyTasks: React.FC<DailyTasksProps> = ({ className }) => {
 };
 
 export default DailyTasks;
+

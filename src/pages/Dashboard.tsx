@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -23,7 +22,6 @@ import MeditationCard from '@/components/MeditationCard';
 import CommunityMap from '@/components/CommunityMap';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import VerseSlideshow from '@/components/VerseSlideshow';
 import DatePicker from '@/components/ui/date-picker';
 import DailyTasks from '@/components/DailyTasks';
 
@@ -152,7 +150,6 @@ const Dashboard: React.FC = () => {
     }
   };
   
-  
   return (
     <motion.div 
       className="container py-8 pb-16"
@@ -177,11 +174,6 @@ const Dashboard: React.FC = () => {
         >
           {formatDate(new Date())} • Keep moving forward
         </motion.p>
-      </div>
-      
-      {/* Daily verse slideshow - NEW SECTION */}
-      <div className="mb-8">
-        <VerseSlideshow className="rounded-xl shadow-sm" />
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -337,7 +329,6 @@ const Dashboard: React.FC = () => {
           </Card>
         </motion.div>
         
-        {/* Replace emergency card with daily tasks */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -347,7 +338,6 @@ const Dashboard: React.FC = () => {
         </motion.div>
       </div>
       
-      {/* Move emergency support below the cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
