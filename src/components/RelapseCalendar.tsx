@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
-import { getRelapseCalendarData } from '../utils/firebase';
+import { getRelapseCalendarData, getRelapseData } from '../utils/firebase';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card } from '@/components/ui/card';
-import { isSameDay } from 'date-fns';
+import { isSameDay, differenceInDays } from 'date-fns';
 import { motion } from 'framer-motion';
 import { DayContentProps } from 'react-day-picker';
 
@@ -25,6 +25,7 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
   const [calendarData, setCalendarData] = useState<DayInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [month, setMonth] = useState<Date>(new Date());
+  const [stats, setStats] = useState({ cleanDays: 0, relapseDays: 0, netGrowth: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,8 +36,17 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
 
       try {
         setIsLoading(true);
+        // Get calendar visualization data
         const data = await getRelapseCalendarData(userId);
         setCalendarData(data);
+        
+        // Get analytics data for accurate stats
+        const relapseData = await getRelapseData(userId, 'all');
+        setStats({
+          cleanDays: relapseData.cleanDays,
+          relapseDays: relapseData.relapseDays,
+          netGrowth: relapseData.netGrowth
+        });
       } catch (error) {
         console.error('Error fetching calendar data:', error);
       } finally {
@@ -140,6 +150,33 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <span className="text-sm">Relapse Day</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                  Clean Days
+                </h4>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                  {stats.cleanDays}
+                </p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
+                <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">
+                  Relapse Days
+                </h4>
+                <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                  {stats.relapseDays}
+                </p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
+                  Net Growth
+                </h4>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                  {stats.netGrowth}
+                </p>
               </div>
             </div>
           </Card>

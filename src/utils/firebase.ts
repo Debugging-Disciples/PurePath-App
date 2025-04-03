@@ -1,11 +1,9 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { format, subDays, differenceInDays, startOfDay, parseISO, isSameDay, addDays } from 'date-fns';
 
-// Define user profile interface
 export interface UserProfile {
   id: string;
   firstName?: string;
@@ -31,7 +29,6 @@ export interface UserProfile {
   };
 }
 
-// Journal entry interface
 export interface JournalEntry {
   id?: string;
   userId: string;
@@ -42,14 +39,12 @@ export interface JournalEntry {
   emotions: string[];  // Selected emotions
 }
 
-// Relapse interface
 export interface Relapse {
   timestamp: Timestamp;
   triggers: string;
   notes?: string;
 }
 
-// Firebase configuration with provided credentials
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -60,8 +55,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-
-// Initialize Firebase with better error handling
 let app, auth, db;
 try {
   console.log("Initializing Firebase app...");
@@ -81,8 +74,6 @@ try {
 
 export { app, auth, db };
 
-// Secure way to check for admin permissions
-// This function uses a hash comparison approach to avoid exposing the email directly
 export const isUserAdmin = async (email: string): Promise<boolean> => {
   if (!db) {
     console.error("Firebase db not initialized");
@@ -101,8 +92,6 @@ export const isUserAdmin = async (email: string): Promise<boolean> => {
   }
 };
 
-
-// Auth functions with conditional checks to prevent errors
 export const login = async (email: string, password: string) => {
   if (!auth) {
     console.error("Firebase auth not initialized");
@@ -133,7 +122,6 @@ export const register = async (
     console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
-    // Create user profile in Firestore
     await setDoc(doc(db, 'users', userCredential.user.uid), {
       username,
       firstName,
@@ -143,7 +131,7 @@ export const register = async (
       relapses: [],  
       gender,
       location: location || null,
-      role: 'member', // Default role
+      role: 'member',
       joinedAt: Timestamp.now(),
       streakDays: 0,
       streakStartDate: Timestamp.now(),
@@ -170,7 +158,6 @@ export const logout = async () => {
   }
 };
 
-// User data functions
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   if (!db) {
     console.error("Firebase db not initialized");
@@ -219,7 +206,6 @@ export const updateUserPassword = async (currentPassword: string, newPassword: s
   }
   
   try {
-    // Re-authenticate user before changing password
     const credential = EmailAuthProvider.credential(
       auth.currentUser.email || '',
       currentPassword
@@ -232,7 +218,6 @@ export const updateUserPassword = async (currentPassword: string, newPassword: s
   } catch (error) {
     console.error('Error updating password:', error);
     
-    // Handle specific error codes
     if (error.code === 'auth/wrong-password') {
       toast.error('Current password is incorrect');
     } else if (error.code === 'auth/weak-password') {
@@ -245,7 +230,6 @@ export const updateUserPassword = async (currentPassword: string, newPassword: s
   }
 };
 
-// Streaks and check-ins
 export const updateStreak = async (userId: string) => {
   try {
     const userRef = doc(db, 'users', userId);
@@ -256,7 +240,6 @@ export const updateStreak = async (userId: string) => {
       const lastCheckIn = userData.lastCheckIn?.toDate() || new Date(0);
       const now = new Date();
       
-      // Check if the last check-in was yesterday (maintaining streak)
       const yesterdayDate = new Date(now);
       yesterdayDate.setDate(now.getDate() - 1);
       
@@ -265,7 +248,6 @@ export const updateStreak = async (userId: string) => {
         lastCheckIn.getMonth() === yesterdayDate.getMonth() && 
         lastCheckIn.getFullYear() === yesterdayDate.getFullYear();
         
-      // Check if already checked in today
       const isToday = 
         lastCheckIn.getDate() === now.getDate() && 
         lastCheckIn.getMonth() === now.getMonth() && 
@@ -278,14 +260,11 @@ export const updateStreak = async (userId: string) => {
       let streakDays = userData.streakDays || 0;
       
       if (isYesterday) {
-        // Maintain streak
         streakDays += 1;
       } else if (!isToday) {
-        // Reset streak if more than a day has been missed
         streakDays = 1;
       }
       
-      // Update user data
       await updateDoc(userRef, {
         lastCheckIn: Timestamp.now(),
         streakDays
@@ -318,7 +297,7 @@ export const updateStreakStart = async (userId: string, startDate: Date) => {
       }
 
       await updateDoc(userRef, {
-        streakDays: diffInDays > 0 ? diffInDays : 0, // Ensure streakDays is not negative
+        streakDays: diffInDays > 0 ? diffInDays : 0,
         streakStartDate: Timestamp.fromDate(startDate)
       });
       
@@ -332,7 +311,6 @@ export const updateStreakStart = async (userId: string, startDate: Date) => {
   }
 };
 
-// Log relapse with multiple triggers (used for analytics)
 interface LogRelapseResult {
   success: boolean;
   message?: string;
@@ -349,8 +327,8 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
     };
 
     await updateDoc(userDocRef, {
-      relapses: arrayUnion(relapseObject), // Append the relapse object to the 'relapses' array
-      streakDays: 0 // Reset streak when relapse is reported
+      relapses: arrayUnion(relapseObject),
+      streakDays: 0
     });
     return { success: true, message: 'Progress reset. Remember: every moment is a new opportunity.' };
   } catch (error) {
@@ -359,7 +337,6 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
   }
 };
 
-// Get relapse data for analytics with enhanced longest streak calculation
 export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
   try {
     const userDocRef = doc(db, 'users', userId);
@@ -380,12 +357,10 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
     const relapses: Relapse[] = userData.relapses || [];
     const journal = userData.journal || [];
     
-    // Sort relapses by timestamp
     const sortedRelapses = [...relapses].sort((a, b) => 
       a.timestamp.toDate().getTime() - b.timestamp.toDate().getTime()
     );
     
-    // Determine the date range based on timeframe
     let startDate = new Date();
     const endDate = new Date();
     
@@ -394,74 +369,64 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
     } else if (timeframe === 'monthly') {
       startDate = subDays(endDate, 30);
     } else {
-      // All time - use join date
       startDate = joinDate;
     }
     
-    // Calculate streaks between relapses or since join date
     const streakData = [];
     const moodData = [];
     let currentDate = startOfDay(startDate);
     const today = startOfDay(new Date());
     let currentStreak = 0;
     let longestStreak = 0;
-    let cleanDays = 0;
-    let relapseDays = 0;
     
-    // Calculate historical longest streak (from join date)
     const historicalLongestStreak = calculateLongestStreak(joinDate, sortedRelapses);
     
-    // Process all days from start date to today
+    const totalDaysSinceJoining = differenceInDays(today, joinDate) + 1;
+    const totalRelapseDays = sortedRelapses.length;
+    const totalCleanDays = totalDaysSinceJoining - totalRelapseDays;
+    const netGrowth = totalCleanDays - totalRelapseDays;
+    
     while (currentDate <= today) {
       const formattedDate = format(currentDate, 'MMM d');
       
-      // Check if this day had a relapse
       const hadRelapse = sortedRelapses.some(relapse => {
         const relapseDate = startOfDay(relapse.timestamp.toDate());
         return isSameDay(relapseDate, currentDate);
       });
       
       if (hadRelapse) {
-        // Relapse day - reset streak
         streakData.push({ date: formattedDate, streak: 0 });
         currentStreak = 0;
-        relapseDays++;
       } else {
-        // Clean day - increase streak
         currentStreak++;
-        cleanDays++;
         streakData.push({ date: formattedDate, streak: currentStreak });
         
-        // Update longest streak for selected timeframe
         if (currentStreak > longestStreak) {
           longestStreak = currentStreak;
         }
       }
       
-      // Find mood data from journal entries for this day
       const journalEntry = journal.find(entry => {
         const entryDate = entry.timestamp.toDate();
         return isSameDay(entryDate, currentDate);
       });
       
-      // Add mood data if available, otherwise use neutral value
       moodData.push({
         date: formattedDate,
         streak: hadRelapse ? 0 : currentStreak,
         mood: journalEntry ? journalEntry.level : 5
       });
       
-      // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
     return {
       streakData,
       moodData,
-      longestStreak: historicalLongestStreak, // Use the all-time longest streak
-      cleanDays,
-      relapseDays,
-      netGrowth: cleanDays - relapseDays
+      longestStreak: historicalLongestStreak,
+      cleanDays: totalCleanDays,
+      relapseDays: totalRelapseDays,
+      netGrowth
     };
   } catch (error) {
     console.error('Error getting relapse data:', error);
@@ -476,17 +441,14 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
   }
 };
 
-// Calculate longest streak between relapses since join date
 export const calculateLongestStreak = (joinDate: Date, sortedRelapses: Relapse[]): number => {
   if (sortedRelapses.length === 0) {
-    // If no relapses, the streak is from join date until today
     return differenceInDays(new Date(), joinDate);
   }
 
   let longestStreak = 0;
   let lastRelapseDate = startOfDay(joinDate);
   
-  // Check streaks between relapses
   for (const relapse of sortedRelapses) {
     const relapseDate = startOfDay(relapse.timestamp.toDate());
     const streakDays = differenceInDays(relapseDate, lastRelapseDate);
@@ -498,7 +460,6 @@ export const calculateLongestStreak = (joinDate: Date, sortedRelapses: Relapse[]
     lastRelapseDate = relapseDate;
   }
   
-  // Check current streak (from last relapse until today)
   const currentStreak = differenceInDays(new Date(), lastRelapseDate);
   if (currentStreak > longestStreak) {
     longestStreak = currentStreak;
@@ -507,7 +468,6 @@ export const calculateLongestStreak = (joinDate: Date, sortedRelapses: Relapse[]
   return longestStreak;
 };
 
-// Get user's relapse calendar data
 export const getRelapseCalendarData = async (userId: string) => {
   try {
     const userDocRef = doc(db, 'users', userId);
@@ -521,18 +481,15 @@ export const getRelapseCalendarData = async (userId: string) => {
     const joinDate = userData.joinedAt?.toDate() || new Date();
     const relapses: Relapse[] = userData.relapses || [];
     
-    // Sort relapses by timestamp
     const sortedRelapses = [...relapses].sort((a, b) => 
       a.timestamp.toDate().getTime() - b.timestamp.toDate().getTime()
     );
     
-    // Create data for each day since joining
     const calendarData = [];
     let currentDate = startOfDay(joinDate);
     const today = startOfDay(new Date());
     
     while (currentDate <= today) {
-      // Check if this day had a relapse
       const relapse = sortedRelapses.find(r => {
         const relapseDate = startOfDay(r.timestamp.toDate());
         return isSameDay(relapseDate, currentDate);
@@ -547,7 +504,6 @@ export const getRelapseCalendarData = async (userId: string) => {
         } : null
       });
       
-      // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
@@ -558,7 +514,6 @@ export const getRelapseCalendarData = async (userId: string) => {
   }
 };
 
-// Journal functions
 export const addJournalEntry = async (entry: JournalEntry): Promise<boolean> => {
   if (!db || !entry.userId) {
     console.error("Firebase db not initialized or missing userId");
@@ -568,13 +523,11 @@ export const addJournalEntry = async (entry: JournalEntry): Promise<boolean> => 
   try {
     const userRef = doc(db, 'users', entry.userId);
     
-    // Convert JS Date to Firestore Timestamp
     const entryWithTimestamp = {
       ...entry,
       timestamp: Timestamp.fromDate(entry.timestamp)
     };
     
-    // Add to journal array in user document
     await updateDoc(userRef, {
       journal: arrayUnion(entryWithTimestamp)
     });
@@ -599,11 +552,10 @@ export const getJournalEntries = async (userId: string): Promise<JournalEntry[]>
     if (userDoc.exists() && userDoc.data().journal) {
       const entries = userDoc.data().journal;
       
-      // Convert Firestore data to our interface format and sort by date
       return entries
         .map((entry) => ({
           ...entry,
-          timestamp: entry.timestamp.toDate() // Convert Timestamp to JS Date
+          timestamp: entry.timestamp.toDate()
         }))
         .sort((a: JournalEntry, b: JournalEntry) => 
           b.timestamp.getTime() - a.timestamp.getTime()
@@ -617,7 +569,6 @@ export const getJournalEntries = async (userId: string): Promise<JournalEntry[]>
   }
 };
 
-// Community map data (anonymized)
 export const getCommunityLocations = async () => {
   try {
     const usersRef = collection(db, 'users');
@@ -628,7 +579,6 @@ export const getCommunityLocations = async () => {
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       if (data.location && data.location.country) {
-        // Only include location data, not user identifiable information
         locations.push({
           id: doc.id,
           location: data.location
@@ -640,6 +590,75 @@ export const getCommunityLocations = async () => {
   } catch (error) {
     console.error('Error fetching community locations:', error);
     return [];
+  }
+};
+
+export const generateGeminiResponse = async (prompt: string, options?: any) => {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    console.error("Gemini API key not found");
+    return { error: "API key not configured. Please add VITE_GEMINI_API_KEY to your environment variables." };
+  }
+
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+    
+    const response = await fetch(`${endpoint}?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1000,
+          ...options
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      return { error: data.error.message || "Error calling Gemini API" };
+    }
+
+    return {
+      text: data.candidates?.[0]?.content?.parts?.[0]?.text || "",
+      finishReason: data.candidates?.[0]?.finishReason || ""
+    };
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    return { error: "Failed to call Gemini API. See console for details." };
   }
 };
 
