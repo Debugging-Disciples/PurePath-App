@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { Play, Pause, Heart, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Heart, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -44,6 +44,9 @@ const FALLBACK_AUDIO = {
   devotional: 'https://cdn.pixabay.com/download/audio/2021/08/08/audio_dc39bde808.mp3'
 };
 
+// Default fallback image URL if none is provided
+const DEFAULT_IMAGE_URL = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=500";
+
 const MeditationCard: React.FC<MeditationCardProps> = ({
   id,
   title,
@@ -65,6 +68,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState(false);
+  const [audioChecked, setAudioChecked] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -88,11 +92,13 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
         console.log('Audio can play through:', url);
         setAudioLoaded(true);
         setAudioError(false);
+        setAudioChecked(true);
       });
       
       audioRef.current.addEventListener('error', (e) => {
         console.error('Audio loading error:', e);
         setAudioError(true);
+        setAudioChecked(true);
         
         // Try fallback if original URL fails
         if (audioUrl === url && FALLBACK_AUDIO[type as keyof typeof FALLBACK_AUDIO]) {
@@ -283,15 +289,26 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
 
   return (
     <Card className={cn("overflow-hidden transition-all duration-300 ease-apple hover:shadow-md", className)}>
-      {imageUrl && (
-        <div className="h-48 overflow-hidden">
-          <img
-            src={imageUrl}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 ease-apple hover:scale-105"
-          />
-        </div>
-      )}
+      <div className="relative">
+        {imageUrl && (
+          <div className="h-48 overflow-hidden">
+            <img
+              src={imageUrl}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-500 ease-apple hover:scale-105"
+            />
+          </div>
+        )}
+        
+        {/* Coming soon overlay for cards with audio errors */}
+        {audioChecked && audioError && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive mb-2" />
+            <span className="font-medium">Audio Coming Soon</span>
+          </div>
+        )}
+      </div>
+      
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
@@ -379,4 +396,3 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
 };
 
 export default MeditationCard;
-

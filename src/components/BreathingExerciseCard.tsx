@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Play, Pause, Heart, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Heart, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,7 +17,6 @@ import { useAuth } from '@/utils/auth';
 import { db } from '@/utils/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { Slider } from '@/components/ui/slider';
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 interface BreathingExerciseCardProps {
@@ -42,6 +41,9 @@ const FALLBACK_AUDIO = {
   exhale: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_c8a329b5aa.mp3'
 };
 
+// Default fallback image URL if none is provided
+const DEFAULT_IMAGE_URL = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=500";
+
 const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
   id,
   title,
@@ -63,10 +65,10 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
-  const [breathState, setBreathState] = useState<'in' | 'hold' | 'out'>('in');
-  const [breathProgress, setBreathProgress] = useState(0);
   const [instruction, setInstruction] = useState('Breathe In');
   const [audioError, setAudioError] = useState(false);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioChecked, setAudioChecked] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const breathIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,9 +87,17 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
     audioRef.current.volume = volume;
     audioRef.current.loop = true;
     
+    audioRef.current.addEventListener('canplaythrough', () => {
+      console.log('Audio can play through:', ambientUrl);
+      setAudioLoaded(true);
+      setAudioError(false);
+      setAudioChecked(true);
+    });
+    
     audioRef.current.addEventListener('error', (e) => {
       console.error('Ambient audio loading error:', e);
       setAudioError(true);
+      setAudioChecked(true);
       
       // Try fallback if original URL fails
       if (audioUrl === ambientUrl) {
@@ -95,6 +105,20 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
         audioRef.current = new Audio(FALLBACK_AUDIO.ambient);
         audioRef.current.volume = volume;
         audioRef.current.loop = true;
+        
+        // Set up listeners for fallback
+        audioRef.current.addEventListener('canplaythrough', () => {
+          console.log('Fallback audio can play through');
+          setAudioLoaded(true);
+          setAudioError(false);
+        });
+        
+        audioRef.current.addEventListener('error', () => {
+          console.error('Fallback audio also failed');
+          setAudioError(true);
+          toast.error('Could not load audio. Please try again later.');
+        });
+        
         audioRef.current.load();
       }
     });
@@ -156,10 +180,7 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
       clearInterval(breathIntervalRef.current);
     }
 
-    setBreathState('in');
     setInstruction('Breathe In');
-    setBreathProgress(0);
-
     let cycleTime = 0;
     const totalCycleTime = breathInDuration + holdDuration + breathOutDuration;
 
@@ -179,20 +200,13 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
       
       if (cycleTime < breathInDuration) {
         // Breathing in phase
-        setBreathState('in');
         setInstruction('Breathe In');
-        setBreathProgress((cycleTime / breathInDuration) * 100);
       } else if (cycleTime < breathInDuration + holdDuration) {
         // Holding phase
-        if (breathState !== 'hold') {
-          setBreathState('hold');
-          setInstruction('Hold');
-          setBreathProgress(100);
-        }
+        setInstruction('Hold');
       } else if (cycleTime < totalCycleTime) {
         // Breathing out phase
-        if (breathState !== 'out') {
-          setBreathState('out');
+        if (instruction !== 'Breathe Out') {
           setInstruction('Breathe Out');
           if (exhaleAudioRef.current) {
             exhaleAudioRef.current.play().catch(e => {
@@ -205,13 +219,10 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
             });
           }
         }
-        setBreathProgress(100 - ((cycleTime - breathInDuration - holdDuration) / breathOutDuration) * 100);
       } else {
         // Reset cycle
         cycleTime = 0;
-        setBreathState('in');
         setInstruction('Breathe In');
-        setBreathProgress(0);
         if (inhaleAudioRef.current) {
           inhaleAudioRef.current.play().catch(() => {});
         }
@@ -345,35 +356,30 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
       </CardHeader>
       
       <CardContent>
-        <div className="flex flex-col items-center mb-6">
-          <AnimatePresence mode="wait">
-            <motion.div 
-              className="relative flex items-center justify-center"
-              key={breathState}
-            >
-              <motion.div
-                className="w-32 h-32 rounded-full bg-gradient-to-r from-cyan-100 to-blue-200 dark:from-cyan-900 dark:to-blue-800"
-                animate={{
-                  scale: breathState === 'in' ? [1, 1.8] : 
-                         breathState === 'hold' ? 1.8 : 
-                         [1.8, 1],
-                  opacity: [0.8, 1, 0.8],
-                  backgroundColor: 
-                    breathState === 'in' ? ['#bae6fd', '#93c5fd'] : 
-                    breathState === 'hold' ? ['#93c5fd', '#93c5fd'] : 
-                    ['#93c5fd', '#bae6fd']
-                }}
-                transition={{
-                  duration: breathState === 'in' ? breathInDuration : 
-                           breathState === 'hold' ? holdDuration : 
-                           breathOutDuration,
-                  ease: breathState === 'hold' ? 'easeInOut' : 'easeInOut'
-                }}
-              />
-            </motion.div>
-          </AnimatePresence>
-          
-          <div className="mt-4 text-lg font-medium">{instruction}</div>
+        <div className="relative mb-6">
+          {/* Image for breathing visualization */}
+          <div className="relative w-full h-48 overflow-hidden rounded-md">
+            <img 
+              src={imageUrl || DEFAULT_IMAGE_URL}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-500 ease-apple hover:scale-105"
+            />
+            
+            {/* Coming soon overlay for cards with audio errors */}
+            {audioChecked && audioError && (
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-destructive mb-2" />
+                <span className="font-medium">Audio Coming Soon</span>
+              </div>
+            )}
+            
+            {/* Breathing instruction overlay */}
+            {isPlaying && (
+              <div className="absolute bottom-0 left-0 right-0 bg-background/70 backdrop-blur-sm py-2 px-3 text-center">
+                <span className="font-medium text-lg">{instruction}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
@@ -439,4 +445,3 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
 };
 
 export default BreathingExerciseCard;
-
