@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { motion } from 'framer-motion';
-import { Send, Users, MessageCircle, Plus, MoreVertical, Smile, Reply, Check } from 'lucide-react';
+import { Send, Users, MessageCircle, Plus, Smile, Reply, Check } from 'lucide-react';
 import { collection, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
 import { db, UserProfile } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
@@ -31,7 +30,6 @@ import {
   ChatMessage, 
   ChatRoom, 
   getAvailableRooms, 
-  getRoomMessages,
   fetchRoomMessages,
   sendMessage, 
   addReaction, 
@@ -135,10 +133,7 @@ const Community: React.FC = () => {
     fetchInitialMessages();
     
     // Set up real-time listener for messages
-    const unsubscribe = getRoomMessages(selectedRoom.id);
-    
-    // Store the unsubscribe function in a ref to clean up later
-    messageListenerRef.current = unsubscribe;
+    const unsubscribe = messageListenerRef.current;
     
     // Add a custom listener to the messages collection
     const messagesQuery = collection(db, 'rooms', selectedRoom.id, 'messages');
@@ -281,12 +276,23 @@ const Community: React.FC = () => {
     }
   };
   
+  // Function to get the correct participant count for gender-specific rooms
+  const getParticipantCount = (room: ChatRoom): number => {
+    if (room.type === 'men') {
+      return users.filter(user => user.gender === 'male').length;
+    } else if (room.type === 'women') {
+      return users.filter(user => user.gender === 'female').length;
+    } else {
+      return room.participants.length;
+    }
+  };
+  
   // Get online count (this is a placeholder - in a real app you'd implement presence tracking)
   const getOnlineCount = (room: ChatRoom) => {
-    // For demonstration, we'll assume 1-3 random participants are online
-    const participantCount = room.participants.length;
+    // For demonstration, calculate a reasonable number of online users
+    const participantCount = getParticipantCount(room);
     const onlineCount = participantCount > 0 
-      ? Math.min(Math.ceil(Math.random() * participantCount), 3) 
+      ? Math.min(Math.ceil(participantCount * 0.3), 5) // About 30% of users are online, max 5
       : 0;
     
     return onlineCount;
@@ -400,7 +406,8 @@ const Community: React.FC = () => {
                     ) : (
                       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
                         {chatRooms.map((room) => {
-                          // Calculate online count for display
+                          // Calculate participant and online count
+                          const participantCount = getParticipantCount(room);
                           const onlineCount = getOnlineCount(room);
                           
                           return (
@@ -422,7 +429,7 @@ const Community: React.FC = () => {
                                 )}
                                 <div className="text-xs mt-1">
                                   <span className="font-medium">
-                                    {room.participants.length} members
+                                    {participantCount} members
                                   </span>
                                   {onlineCount > 0 && (
                                     <span className="ml-2">

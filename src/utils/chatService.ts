@@ -1,4 +1,3 @@
-
 import { db, auth } from './firebase';
 import { 
   collection, 
@@ -47,53 +46,73 @@ export interface ChatRoom {
 }
 
 // Get available chat rooms for a user based on their gender
-export const getAvailableRooms = (userId: string, gender?: string) => {
-  return new Promise<ChatRoom[]>((resolve, reject) => {
-    try {
-      // Query for rooms where the user is a participant or public rooms
-      const roomsQuery = query(
-        collection(db, 'rooms')
-      );
-      
-      onSnapshot(roomsQuery, (snapshot) => {
-        const rooms: ChatRoom[] = [];
-        
-        snapshot.forEach((doc) => {
-          const roomData = doc.data() as Omit<ChatRoom, 'id'>;
-          const room: ChatRoom = {
-            id: doc.id,
-            ...roomData,
-            createdAt: roomData.createdAt as Timestamp
-          };
-          
-          // Filter rooms based on user's gender for gender-specific rooms
-          if (
-            room.type === 'main' || 
-            (room.type === 'men' && gender === 'male') || 
-            (room.type === 'women' && gender === 'female') || 
-            (room.type === 'group' && (room.participants.includes(userId) || room.createdBy === userId))
-          ) {
-            rooms.push(room);
-          }
-        });
-        
-        // Sort rooms by last message timestamp or creation time
-        rooms.sort((a, b) => {
-          const timeA = a.lastMessage?.timestamp || a.createdAt;
-          const timeB = b.lastMessage?.timestamp || b.createdAt;
-          return timeB.toMillis() - timeA.toMillis();
-        });
-        
-        resolve(rooms);
-      }, (error) => {
-        console.error("Error getting chat rooms:", error);
-        reject(error);
+export const getAvailableRooms = async (userId: string, gender?: string): Promise<ChatRoom[]> => {
+  try {
+    // First, get all chat rooms
+    const roomsQuery = query(collection(db, 'rooms'));
+    const snapshot = await getDocs(roomsQuery);
+    
+    const rooms: ChatRoom[] = [];
+    const allUserProfiles: UserProfile[] = [];
+    
+    // Get all user profiles to determine gender filtering
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    usersSnapshot.forEach((userDoc) => {
+      allUserProfiles.push({ 
+        id: userDoc.id, 
+        ...userDoc.data() as Omit<UserProfile, 'id'> 
       });
-    } catch (error) {
-      console.error("Error in getAvailableRooms:", error);
-      reject(error);
+    });
+    
+    // Process each room
+    for (const doc of snapshot.docs) {
+      const roomData = doc.data() as Omit<ChatRoom, 'id'>;
+      const room: ChatRoom = {
+        id: doc.id,
+        ...roomData,
+        createdAt: roomData.createdAt as Timestamp
+      };
+      
+      // For gender-specific rooms, apply filtering of participants
+      if (room.type === 'men') {
+        // Filter to include only male participants
+        room.participants = allUserProfiles
+          .filter(user => user.gender === 'male')
+          .map(user => user.id);
+      } else if (room.type === 'women') {
+        // Filter to include only female participants
+        room.participants = allUserProfiles
+          .filter(user => user.gender === 'female')
+          .map(user => user.id);
+      } else if (room.type === 'main') {
+        // Include all users in the main room
+        room.participants = allUserProfiles.map(user => user.id);
+      }
+      
+      // Determine which rooms should be available to this user
+      const shouldInclude = 
+        room.type === 'main' || 
+        (room.type === 'men' && gender === 'male') || 
+        (room.type === 'women' && gender === 'female') || 
+        (room.type === 'group' && (room.participants.includes(userId) || room.createdBy === userId));
+      
+      if (shouldInclude) {
+        rooms.push(room);
+      }
     }
-  });
+    
+    // Sort rooms by last message timestamp or creation time
+    rooms.sort((a, b) => {
+      const timeA = a.lastMessage?.timestamp || a.createdAt;
+      const timeB = b.lastMessage?.timestamp || b.createdAt;
+      return timeB.toMillis() - timeA.toMillis();
+    });
+    
+    return rooms;
+  } catch (error) {
+    console.error("Error in getAvailableRooms:", error);
+    return [];
+  }
 };
 
 // Get messages for a specific room

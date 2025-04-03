@@ -10,9 +10,9 @@ import { useAuth } from '@/utils/auth';
 import { db } from '@/utils/firebase'; 
 import { doc, getDoc } from 'firebase/firestore';
 
-// Enhanced meditation data with new content types
+// Enhanced meditation data with better audio sources
 const MEDITATIONS_DATA = [
-    // Original meditations
+    // Original meditations with updated audio
     {
         id: '1',
         title: 'Urge Surfing',
@@ -22,7 +22,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'meditation',
         imageUrl: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_1b1256f8c0.mp3',
         tags: ['urges', 'beginner', 'recovery']
     },
     {
@@ -34,7 +34,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'meditation',
         imageUrl: 'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/01/14/audio_31743b0353.mp3',
         tags: ['morning', 'routine', 'focus']
     },
     {
@@ -46,7 +46,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'meditation',
         imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/05/16/audio_a4dc4156e5.mp3',
         tags: ['relaxation', 'stress', 'sleep']
     },
     {
@@ -58,7 +58,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'meditation',
         imageUrl: 'https://images.unsplash.com/photo-1519834556553-a080ee817e1f?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-spirit-of-the-woods-544.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/01/20/audio_d16da7a9c7.mp3',
         tags: ['emotions', 'awareness', 'intermediate']
     },
     {
@@ -70,7 +70,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'meditation',
         imageUrl: 'https://images.unsplash.com/photo-1518002171953-8e4385a41802?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-peaceful-morning-light-554.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/08/04/audio_2dde898d0f.mp3',
         tags: ['compassion', 'kindness', 'healing']
     },
     {
@@ -82,7 +82,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'meditation',
         imageUrl: 'https://images.unsplash.com/photo-1566305977571-5666677c6e56?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-a-simple-meditation-fluid-3127.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2021/08/09/audio_f93e793eb8.mp3',
         tags: ['sleep', 'evening', 'relaxation']
     },
     {
@@ -94,7 +94,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'breathing',
         imageUrl: 'https://images.unsplash.com/photo-1586034679970-cb7b5fc4928a?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-relaxed-morning-wake-up-piano-2942.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d1718beae7.mp3',
         tags: ['breathing', 'anxiety', 'stress-relief'],
         breathInDuration: 4,
         holdDuration: 4,
@@ -109,7 +109,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'breathing',
         imageUrl: 'https://images.unsplash.com/photo-1517898717281-8e4385a41802?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-ambient-space-2125.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2021/04/07/audio_401b8d8d0b.mp3',
         tags: ['breathing', 'sleep', 'anxiety']
     },
     {
@@ -121,7 +121,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'prayer',
         imageUrl: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-ethereal-notification-938.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2021/10/10/audio_81b31aaeca.mp3',
         tags: ['prayer', 'serenity', 'acceptance']
     },
     {
@@ -133,7 +133,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'prayer',
         imageUrl: 'https://images.unsplash.com/photo-1475137979732-b349acb6b7e3?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-gentle-morning-light-554.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/08/02/audio_884fe92c21.mp3',
         tags: ['prayer', 'strength', 'temptation']
     },
     {
@@ -145,7 +145,7 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'devotional',
         imageUrl: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-church-light-56.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/08/03/audio_1b2fbeb6e6.mp3',
         tags: ['devotional', 'scripture', 'reflection']
     },
     {
@@ -157,11 +157,10 @@ const MEDITATIONS_DATA = [
         favorite: false,
         type: 'devotional',
         imageUrl: 'https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?auto=format&fit=crop&q=80&w=500',
-        audioUrl: 'https://assets.mixkit.co/music/preview/mixkit-cathedral-light-54.mp3',
+        audioUrl: 'https://cdn.pixabay.com/download/audio/2022/02/07/audio_cca8a4d351.mp3',
         tags: ['devotional', 'reflection', 'spirituality']
     }
 ];
-
 
 const Meditations: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');

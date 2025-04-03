@@ -36,6 +36,14 @@ export interface MeditationCardProps {
   breathOutDuration?: number;
 }
 
+// Fallback audio URLs in case the provided ones don't work
+const FALLBACK_AUDIO = {
+  meditation: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_1b1256f8c0.mp3',
+  breathing: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d1718beae7.mp3', 
+  prayer: 'https://cdn.pixabay.com/download/audio/2022/08/02/audio_884fe92c21.mp3',
+  devotional: 'https://cdn.pixabay.com/download/audio/2021/08/08/audio_dc39bde808.mp3'
+};
+
 const MeditationCard: React.FC<MeditationCardProps> = ({
   id,
   title,
@@ -56,6 +64,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
   const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioError, setAudioError] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -63,19 +72,53 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
   const { currentUser } = useAuth();
 
   useEffect(() => {
-    if (audioUrl) {
-      audioRef.current = new Audio(audioUrl);
+    let url = audioUrl;
+    
+    // Use fallback audio if no URL is provided based on content type
+    if (!url || url.trim() === '') {
+      url = FALLBACK_AUDIO[type as keyof typeof FALLBACK_AUDIO] || FALLBACK_AUDIO.meditation;
+    }
+    
+    if (url) {
+      audioRef.current = new Audio(url);
       audioRef.current.volume = volume;
       
       // Add event listeners for better error handling
       audioRef.current.addEventListener('canplaythrough', () => {
-        console.log('Audio can play through');
+        console.log('Audio can play through:', url);
         setAudioLoaded(true);
+        setAudioError(false);
       });
       
       audioRef.current.addEventListener('error', (e) => {
         console.error('Audio loading error:', e);
-        toast.error('Could not load audio. Please try again.');
+        setAudioError(true);
+        
+        // Try fallback if original URL fails
+        if (audioUrl === url && FALLBACK_AUDIO[type as keyof typeof FALLBACK_AUDIO]) {
+          console.log('Trying fallback audio');
+          const fallbackUrl = FALLBACK_AUDIO[type as keyof typeof FALLBACK_AUDIO] || FALLBACK_AUDIO.meditation;
+          
+          audioRef.current = new Audio(fallbackUrl);
+          audioRef.current.volume = volume;
+          
+          // Set up new listeners for fallback
+          audioRef.current.addEventListener('canplaythrough', () => {
+            console.log('Fallback audio can play through');
+            setAudioLoaded(true);
+            setAudioError(false);
+          });
+          
+          audioRef.current.addEventListener('error', () => {
+            console.error('Fallback audio also failed');
+            toast.error('Could not load audio. Please try again later.');
+            setAudioError(true);
+          });
+          
+          audioRef.current.load();
+        } else {
+          toast.error('Could not load audio. Please try again.');
+        }
       });
       
       // Preload the audio
@@ -90,7 +133,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
         }
       };
     }
-  }, [audioUrl]);
+  }, [audioUrl, type, volume]);
 
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
@@ -124,8 +167,9 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
       
       if (audioRef.current) {
         audioRef.current.currentTime = elapsedTime;
+        
         // Log before play attempt to help with debugging
-        console.log('Attempting to play audio:', audioUrl);
+        console.log('Attempting to play audio:', audioRef.current.src);
         
         audioRef.current.play()
           .then(() => {
@@ -133,7 +177,28 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
           })
           .catch(error => {
             console.error("Audio playback error:", error);
-            toast.error('Could not play audio. Please try again or check browser settings.');
+            
+            // Try to recover with user interaction
+            toast.error('Audio playback failed. Trying to recover...');
+            
+            // If there's an error, try to recreate the audio element
+            const currentSrc = audioRef.current?.src;
+            if (currentSrc) {
+              audioRef.current = new Audio(currentSrc);
+              audioRef.current.volume = isMuted ? 0 : volume;
+              audioRef.current.currentTime = elapsedTime;
+              
+              // Try playing again with slightly delayed second attempt
+              setTimeout(() => {
+                if (audioRef.current) {
+                  audioRef.current.play()
+                    .catch(() => {
+                      setIsPlaying(false);
+                      toast.error('Could not play audio. Check your browser settings or try another meditation.');
+                    });
+                }
+              }, 500);
+            }
           });
       }
       
@@ -255,34 +320,32 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
         <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
           <div>{isPlaying ? formatTime(elapsedTime) : "0:00"} / {duration}:00</div>
           
-          {audioUrl && (
-            <div 
-              className="relative"
-              onMouseEnter={() => setShowVolumeControl(true)}
-              onMouseLeave={() => setShowVolumeControl(false)}
+          <div 
+            className="relative"
+            onMouseEnter={() => setShowVolumeControl(true)}
+            onMouseLeave={() => setShowVolumeControl(false)}
+          >
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
+              onClick={toggleMute}
             >
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 w-8 p-0" 
-                onClick={toggleMute}
-              >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </Button>
-              
-              {showVolumeControl && (
-                <div className="absolute bottom-full right-0 bg-background border rounded-md p-3 shadow-md mb-2 w-32">
-                  <Slider
-                    value={[volume]}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onValueChange={handleVolumeChange}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </Button>
+            
+            {showVolumeControl && (
+              <div className="absolute bottom-full right-0 bg-background border rounded-md p-3 shadow-md mb-2 w-32">
+                <Slider
+                  value={[volume]}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onValueChange={handleVolumeChange}
+                />
+              </div>
+            )}
+          </div>
         </div>
         
         <Progress value={progress} className="h-1.5" />
@@ -296,6 +359,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
           size="sm"
           onClick={handlePlayPause}
           className="transition-all duration-200 ease-apple flex items-center"
+          disabled={audioError}
         >
           {isPlaying ? (
             <>
@@ -315,3 +379,4 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
 };
 
 export default MeditationCard;
+

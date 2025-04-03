@@ -18,6 +18,7 @@ import { db } from '@/utils/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { Slider } from '@/components/ui/slider';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface BreathingExerciseCardProps {
   id: string;
@@ -33,6 +34,13 @@ interface BreathingExerciseCardProps {
   holdDuration?: number; // in seconds
   breathOutDuration?: number; // in seconds
 }
+
+// Fallback audio URLs
+const FALLBACK_AUDIO = {
+  ambient: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d1718beae7.mp3',
+  inhale: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3',
+  exhale: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_c8a329b5aa.mp3'
+};
 
 const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
   id,
@@ -58,6 +66,7 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
   const [breathState, setBreathState] = useState<'in' | 'hold' | 'out'>('in');
   const [breathProgress, setBreathProgress] = useState(0);
   const [instruction, setInstruction] = useState('Breathe In');
+  const [audioError, setAudioError] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const breathIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -69,25 +78,51 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
 
   // Initialize audio
   useEffect(() => {
-    if (audioUrl) {
-      audioRef.current = new Audio(audioUrl);
-      audioRef.current.volume = volume;
-      audioRef.current.loop = true;
-    }
+    // Set up ambient background audio
+    const ambientUrl = audioUrl || FALLBACK_AUDIO.ambient;
     
-    // Load inhale and exhale sounds
-    inhaleAudioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-light-air-sweep-1208.mp3');
-    exhaleAudioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-fast-small-sweep-transition-166.mp3');
+    audioRef.current = new Audio(ambientUrl);
+    audioRef.current.volume = volume;
+    audioRef.current.loop = true;
+    
+    audioRef.current.addEventListener('error', (e) => {
+      console.error('Ambient audio loading error:', e);
+      setAudioError(true);
+      
+      // Try fallback if original URL fails
+      if (audioUrl === ambientUrl) {
+        console.log('Trying fallback ambient audio');
+        audioRef.current = new Audio(FALLBACK_AUDIO.ambient);
+        audioRef.current.volume = volume;
+        audioRef.current.loop = true;
+        audioRef.current.load();
+      }
+    });
+    
+    // Set up inhale sound
+    inhaleAudioRef.current = new Audio(FALLBACK_AUDIO.inhale);
+    inhaleAudioRef.current.volume = volume;
+    
+    // Set up exhale sound
+    exhaleAudioRef.current = new Audio(FALLBACK_AUDIO.exhale);
+    exhaleAudioRef.current.volume = volume;
+    
+    // Preload all audios
+    [audioRef, inhaleAudioRef, exhaleAudioRef].forEach(ref => {
+      if (ref.current) ref.current.load();
+    });
     
     return () => {
       [audioRef, inhaleAudioRef, exhaleAudioRef].forEach(ref => {
         if (ref.current) {
           ref.current.pause();
+          ref.current.removeEventListener('canplaythrough', () => {});
+          ref.current.removeEventListener('error', () => {});
           ref.current.src = "";
         }
       });
     };
-  }, [audioUrl]);
+  }, [audioUrl, volume]);
 
   // Check if this meditation is favorited
   useEffect(() => {
@@ -129,7 +164,14 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
     const totalCycleTime = breathInDuration + holdDuration + breathOutDuration;
 
     if (inhaleAudioRef.current) {
-      inhaleAudioRef.current.play().catch(e => console.error("Could not play inhale audio:", e));
+      inhaleAudioRef.current.play().catch(e => {
+        console.error("Could not play inhale audio:", e);
+        // Try to reload the audio
+        if (inhaleAudioRef.current) {
+          inhaleAudioRef.current.load();
+          setTimeout(() => inhaleAudioRef.current?.play().catch(() => {}), 500);
+        }
+      });
     }
 
     breathIntervalRef.current = setInterval(() => {
@@ -153,7 +195,14 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
           setBreathState('out');
           setInstruction('Breathe Out');
           if (exhaleAudioRef.current) {
-            exhaleAudioRef.current.play().catch(e => console.error("Could not play exhale audio:", e));
+            exhaleAudioRef.current.play().catch(e => {
+              console.error("Could not play exhale audio:", e);
+              // Try to reload the audio
+              if (exhaleAudioRef.current) {
+                exhaleAudioRef.current.load();
+                setTimeout(() => exhaleAudioRef.current?.play().catch(() => {}), 500);
+              }
+            });
           }
         }
         setBreathProgress(100 - ((cycleTime - breathInDuration - holdDuration) / breathOutDuration) * 100);
@@ -164,7 +213,7 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
         setInstruction('Breathe In');
         setBreathProgress(0);
         if (inhaleAudioRef.current) {
-          inhaleAudioRef.current.play().catch(e => console.error("Could not play inhale audio:", e));
+          inhaleAudioRef.current.play().catch(() => {});
         }
       }
     }, 100);
@@ -182,7 +231,19 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
       // Start ambient audio if available
       if (audioRef.current) {
         audioRef.current.play().catch(error => {
-          console.error("Audio playback error:", error);
+          console.error("Ambient audio playback error:", error);
+          
+          // Try alternative approach to get audio playing
+          const currentSrc = audioRef.current?.src;
+          audioRef.current = new Audio(currentSrc || FALLBACK_AUDIO.ambient);
+          audioRef.current.volume = isMuted ? 0 : volume;
+          audioRef.current.loop = true;
+          
+          setTimeout(() => {
+            audioRef.current?.play().catch(() => {
+              console.log("Still can't play audio after retry");
+            });
+          }, 500);
         });
       }
       
@@ -358,6 +419,7 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
           size="sm"
           onClick={handlePlayPause}
           className="transition-all duration-200 ease-apple flex items-center"
+          disabled={audioError}
         >
           {isPlaying ? (
             <>
@@ -377,3 +439,4 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
 };
 
 export default BreathingExerciseCard;
+
