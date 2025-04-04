@@ -46,13 +46,13 @@ export interface Relapse {
 }
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
 let app, auth, db;
@@ -374,7 +374,7 @@ export const getRelapseData = async (userId: string, timeframe = 'weekly') => {
     
     const streakData = [];
     const moodData = [];
-    let currentDate = startOfDay(startDate);
+    const currentDate = startOfDay(startDate);
     const today = startOfDay(new Date());
     let currentStreak = 0;
     let longestStreak = 0;
@@ -486,7 +486,7 @@ export const getRelapseCalendarData = async (userId: string) => {
     );
     
     const calendarData = [];
-    let currentDate = startOfDay(joinDate);
+    const currentDate = startOfDay(joinDate);
     const today = startOfDay(new Date());
     
     while (currentDate <= today) {
@@ -593,7 +593,7 @@ export const getCommunityLocations = async () => {
   }
 };
 
-export const generateGeminiResponse = async (prompt: string, options?: any) => {
+export const generateGeminiResponse = async (prompt: string, options?) => {
   if (!import.meta.env.VITE_GEMINI_API_KEY) {
     console.error("Gemini API key not found");
     return { error: "API key not configured. Please add VITE_GEMINI_API_KEY to your environment variables." };
