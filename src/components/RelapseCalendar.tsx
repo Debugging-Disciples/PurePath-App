@@ -10,6 +10,7 @@ import { DayContentProps } from 'react-day-picker';
 
 interface RelapseCalendarProps {
   userId?: string;
+  showStats?: boolean;
 }
 
 interface DayInfo {
@@ -21,7 +22,7 @@ interface DayInfo {
   } | null;
 }
 
-const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
+const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId, showStats = true }) => {
   const [calendarData, setCalendarData] = useState<DayInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [month, setMonth] = useState<Date>(new Date());
@@ -153,32 +154,34 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
-                <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                  Clean Days
-                </h4>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {stats.cleanDays}
-                </p>
+            {showStats && (
+              <div className="grid grid-cols-3 gap-4 mt-6">
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                  <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                    Clean Days
+                  </h4>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {stats.cleanDays}
+                  </p>
+                </div>
+                <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
+                  <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">
+                    Relapse Days
+                  </h4>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                    {stats.relapseDays}
+                  </p>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                  <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
+                    Net Growth
+                  </h4>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {stats.netGrowth}
+                  </p>
+                </div>
               </div>
-              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
-                <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">
-                  Relapse Days
-                </h4>
-                <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                  {stats.relapseDays}
-                </p>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
-                <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
-                  Net Growth
-                </h4>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {stats.netGrowth}
-                </p>
-              </div>
-            </div>
+            )}
           </Card>
         )}
       </div>

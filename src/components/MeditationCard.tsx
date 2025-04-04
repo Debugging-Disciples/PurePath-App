@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Play, Pause, Heart, Volume2, VolumeX, AlertCircle } from 'lucide-react';
@@ -117,13 +116,10 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
           
           audioRef.current.addEventListener('error', () => {
             console.error('Fallback audio also failed');
-            toast.error('Could not load audio. Please try again later.');
             setAudioError(true);
           });
           
           audioRef.current.load();
-        } else {
-          toast.error('Could not load audio. Please try again.');
         }
       });
       
@@ -185,7 +181,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
             console.error("Audio playback error:", error);
             
             // Try to recover with user interaction
-            toast.error('Audio playback failed. Trying to recover...');
+            // Remove toast notification
             
             // If there's an error, try to recreate the audio element
             const currentSrc = audioRef.current?.src;
@@ -200,7 +196,7 @@ const MeditationCard: React.FC<MeditationCardProps> = ({
                   audioRef.current.play()
                     .catch(() => {
                       setIsPlaying(false);
-                      toast.error('Could not play audio. Check your browser settings or try another meditation.');
+                      // Remove toast notification
                     });
                 }
               }, 500);

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Play, Pause, Heart, Volume2, VolumeX, AlertCircle } from 'lucide-react';
@@ -17,7 +16,6 @@ import { useAuth } from '@/utils/auth';
 import { db } from '@/utils/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { Slider } from '@/components/ui/slider';
-import { toast } from 'sonner';
 
 interface BreathingExerciseCardProps {
   id: string;
@@ -116,7 +114,6 @@ const BreathingExerciseCard: React.FC<BreathingExerciseCardProps> = ({
         audioRef.current.addEventListener('error', () => {
           console.error('Fallback audio also failed');
           setAudioError(true);
-          toast.error('Could not load audio. Please try again later.');
         });
         
         audioRef.current.load();
