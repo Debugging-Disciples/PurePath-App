@@ -22,7 +22,7 @@ interface DayInfo {
   } | null;
 }
 
-const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId, showStats = true }) => {
+const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId, showStats = false }) => {
   const [calendarData, setCalendarData] = useState<DayInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [month, setMonth] = useState<Date>(new Date());
@@ -153,8 +153,6 @@ const RelapseCalendar: React.FC<RelapseCalendarProps> = ({ userId, showStats = t
                 <span className="text-sm">Relapse Day</span>
               </div>
             </div>
-
-            
           </Card>
         )}
       </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import ProgressChart from "@/components/ProgressChart";
-import { logRelapse, getUserProfile, getRelapseData, calculateLongestStreak } from "../utils/firebase";
+import { logRelapse, getUserProfile, getRelapseData, calculateLongestStreak, getJournalEntries } from "../utils/firebase";
 import { useAuth } from "../utils/auth";
 import { motion } from "framer-motion";
 import {
@@ -41,18 +42,19 @@ const Analytics: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [selectedTrigger, setSelectedTrigger] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>(
-    []
-  );
+  const [triggers, setTriggers] = useState<{ name: string; count: number }[]>([]);
   const [streakData, setStreakData] = useState<any[]>([]);
   const [moodData, setMoodData] = useState<any[]>([]);
+  const [hasJournalEntries, setHasJournalEntries] = useState(false);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [chartTimeframe, setChartTimeframe] = useState("weekly");
+  const [chartTimeframe, setChartTimeframe] = useState("all"); // Default to "all" for new users
   const [relapseStats, setRelapseStats] = useState({
     cleanDays: 0,
     relapseDays: 0,
     netGrowth: 0,
   });
+  const [daysActive, setDaysActive] = useState(0);
+  const [isNewUser, setIsNewUser] = useState(true);
 
   const useTriggers = (uid: string | undefined) => {
     useEffect(() => {
@@ -94,6 +96,59 @@ const Analytics: React.FC = () => {
     return triggers;
   };
 
+  // Fetch journal entries to get mood data
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const fetchJournalData = async () => {
+      try {
+        const journalEntries = await getJournalEntries(currentUser.uid);
+        
+        if (journalEntries.length > 0) {
+          setHasJournalEntries(true);
+          
+          // Format journal mood data for chart
+          const formattedMoodData = journalEntries.map(entry => ({
+            date: entry.timestamp instanceof Date 
+              ? entry.timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              : new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            mood: entry.level
+          }));
+          
+          setMoodData(formattedMoodData);
+        }
+      } catch (error) {
+        console.error("Error fetching journal entries:", error);
+      }
+    };
+
+    fetchJournalData();
+  }, [currentUser]);
+
+  // Check if user is new (less than 7 days) and set timeframe accordingly
+  useEffect(() => {
+    if (!userProfile?.createdAt) return;
+    
+    const createdDate = userProfile.createdAt instanceof Date 
+      ? userProfile.createdAt
+      : userProfile.createdAt.toDate();
+    
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    setDaysActive(diffDays);
+    
+    // If user has been active for more than 7 days, they're not considered new
+    if (diffDays >= 7) {
+      setIsNewUser(false);
+      setChartTimeframe("weekly"); // Switch to weekly view once we have enough data
+    } else {
+      setIsNewUser(true);
+      setChartTimeframe("all"); // Use "all" for new users until they have 7 days of data
+    }
+  }, [userProfile]);
+
   useEffect(() => {
     if (!currentUser?.uid) return;
 
@@ -101,7 +156,6 @@ const Analytics: React.FC = () => {
       try {
         const data = await getRelapseData(currentUser.uid, chartTimeframe);
         setStreakData(data.streakData);
-        setMoodData(data.moodData);
         setLongestStreak(data.longestStreak);
         setRelapseStats({
           cleanDays: data.cleanDays,
@@ -274,7 +328,11 @@ const Analytics: React.FC = () => {
             className="space-y-6"
           >
             <div className="flex justify-end mb-4">
-              <Select value={chartTimeframe} onValueChange={setChartTimeframe}>
+              <Select 
+                value={chartTimeframe} 
+                onValueChange={setChartTimeframe}
+                disabled={isNewUser && daysActive < 7}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select timeframe" />
                 </SelectTrigger>
@@ -285,8 +343,26 @@ const Analytics: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <ProgressChart data={streakData} type="streak" />
-            <ProgressChart data={moodData} type="mood" />
+            
+            {isNewUser && daysActive < 7 && (
+              <div className="text-sm text-muted-foreground mb-4">
+                Showing all-time data until you have a full week of history. 
+                Daily charts will be available after 7 days of activity.
+              </div>
+            )}
+            
+            <ProgressChart 
+              data={streakData} 
+              type="streak" 
+              newUser={isNewUser} 
+              daysActive={daysActive} 
+            />
+            
+            <ProgressChart 
+              data={moodData} 
+              type="mood" 
+              hasJournalEntries={hasJournalEntries} 
+            />
           </motion.div>
         </TabsContent>
 

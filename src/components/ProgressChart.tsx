@@ -14,6 +14,9 @@ import {
   Cell
 } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { PencilLine } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface ChartData {
   date: string;
@@ -25,6 +28,9 @@ interface ProgressChartProps {
   data: ChartData[];
   className?: string;
   type?: 'streak' | 'mood';
+  hasJournalEntries?: boolean;
+  newUser?: boolean;
+  daysActive?: number;
 }
 
 // Helper function to get colors based on streak value
@@ -42,13 +48,20 @@ const getMoodColor = (value: number) => {
   return 'hsl(150, 90%, 40%)';
 };
 
-const ProgressChart: React.FC<ProgressChartProps> = ({ data, className, type = 'streak' }) => {
+const ProgressChart: React.FC<ProgressChartProps> = ({ 
+  data, 
+  className, 
+  type = 'streak',
+  hasJournalEntries = false,
+  newUser = false,
+  daysActive = 0
+}) => {
   const isMobile = useIsMobile();
   
   const chartTitle = type === 'streak' ? 'Streak Progress' : 'Mood Tracking';
   const chartDescription = type === 'streak' 
     ? 'Your continuous days of staying on track'
-    : 'How you\'ve been feeling day by day';
+    : 'How you\'ve been feeling based on journal entries';
   
   // Process streak data: if a relapse is found subtract 1, otherwise add 1
   const processedData = React.useMemo(() => {
@@ -115,6 +128,52 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ data, className, type = '
     }
     return null;
   };
+
+  // Handle empty data state for mood tracking
+  if (type === 'mood' && !hasJournalEntries) {
+    return (
+      <div className={cn("p-6 rounded-lg border border-border bg-card", className)}>
+        <h3 className="text-lg font-medium mb-1">{chartTitle}</h3>
+        <p className="text-sm text-muted-foreground mb-4">{chartDescription}</p>
+        
+        <div className="h-64 relative">
+          <div className="absolute inset-0 backdrop-blur-sm bg-black/5 rounded-md flex flex-col items-center justify-center z-10">
+            <p className="text-center text-muted-foreground mb-3 px-4">
+              Start journaling to track your mood over time
+            </p>
+            <Button asChild>
+              <Link to="/journal">
+                <PencilLine className="mr-2 h-4 w-4" />
+                Create Your First Journal Entry
+              </Link>
+            </Button>
+          </div>
+          
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={[]} margin={{ top: 10, right: 10, left: isMobile ? 0 : 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/40" />
+              <XAxis 
+                dataKey="date" 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12 }}
+                tickMargin={10}
+                className="text-xs text-muted-foreground" 
+              />
+              <YAxis 
+                domain={[0, 10]} 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12 }}
+                tickMargin={10}
+                className="text-xs text-muted-foreground"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className={cn("p-6 rounded-lg border border-border bg-card", className)}>
