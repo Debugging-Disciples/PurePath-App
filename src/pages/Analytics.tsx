@@ -127,11 +127,11 @@ const Analytics: React.FC = () => {
 
   // Check if user is new (less than 7 days) and set timeframe accordingly
   useEffect(() => {
-    if (!userProfile?.createdAt) return;
+    if (!userProfile?.joinedAt) return;
     
-    const createdDate = userProfile.createdAt instanceof Date 
-      ? userProfile.createdAt
-      : userProfile.createdAt.toDate();
+    const createdDate = userProfile.joinedAt instanceof Date 
+      ? userProfile.joinedAt
+      : userProfile.joinedAt.toDate();
     
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - createdDate.getTime());
