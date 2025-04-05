@@ -179,15 +179,6 @@ const Journal: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className={currentTheme === 'light' ? 'text-slate-800' : 'text-white'}
-            >
-              {currentTheme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </Button>
-            
             <Button 
               variant="ghost" 
               className={currentTheme === 'light' ? 'text-slate-800' : 'text-white'}
