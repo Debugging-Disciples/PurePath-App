@@ -3,7 +3,7 @@ import { useAuth } from '../utils/auth';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CustomBadge } from '@/components/ui/custom-badge';
 import { Trophy, Award, Star, Circle, CheckCircle, Target } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -280,7 +280,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-sm">{achievement.title}</p>
                   {achievement.unlocked ? (
-                    <Badge variant="success">Unlocked</Badge>
+                    <CustomBadge variant="success">Unlocked</CustomBadge>
                   ) : (
                     <p className="text-xs text-muted-foreground">
                       {achievement.progress}/{achievement.requirement}
@@ -304,9 +304,9 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
           
           {!showAll && achievements.length > 3 && (
             <div className="text-center mt-2">
-              <Badge variant="outline" className="cursor-pointer hover:bg-secondary">
+              <CustomBadge variant="outline" className="cursor-pointer hover:bg-secondary">
                 View all achievements
-              </Badge>
+              </CustomBadge>
             </div>
           )}
         </div>
