@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -12,7 +13,8 @@ import {
   Map,
   HeartPulse,
   CheckIcon,
-  BookOpen
+  BookOpen,
+  Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +26,11 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import DatePicker from '@/components/ui/date-picker';
 import DailyTasks from '@/components/DailyTasks';
+import AchievementSystem from '@/components/AchievementSystem';
+import CommunityChallenges from '@/components/CommunityChallenges';
+import ReferralProgram from '@/components/ReferralProgram';
+import OnboardingGuide from '@/components/OnboardingGuide';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('en-US', { 
@@ -40,6 +47,8 @@ const Dashboard: React.FC = () => {
   const [isCheckedInToday, setIsCheckedInToday] = useState(false);
   const [isCheckInSide, setIsCheckInSide] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const isMobile = useIsMobile();
   
   const featuredMeditations = [
     {
@@ -76,6 +85,11 @@ const Dashboard: React.FC = () => {
           lastCheckInDate.getMonth() === today.getMonth() &&
           lastCheckInDate.getFullYear() === today.getFullYear()
         );
+      }
+      
+      // Check if onboarding should be shown
+      if (userProfile.onboardingCompleted) {
+        setShowOnboarding(false);
       }
     }
   }, [currentUser, userProfile]);
@@ -175,6 +189,17 @@ const Dashboard: React.FC = () => {
           {formatDate(new Date())} • Keep moving forward
         </motion.p>
       </div>
+      
+      {showOnboarding && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="mb-8"
+        >
+          <OnboardingGuide />
+        </motion.div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <motion.div
@@ -280,53 +305,9 @@ const Dashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
+          className={isMobile ? "order-3" : ""}
         >
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Quick Access</CardTitle>
-              <CardDescription>
-                Tools to support your journey
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/meditations">
-                  <div className="flex items-center">
-                    <HeartPulse className="mr-2 h-4 w-4" />
-                    <span>Meditations</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/journal">
-                  <div className="flex items-center">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    <span>Journal</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/community">
-                  <div className="flex items-center">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    <span>Community Chat</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full justify-between" asChild>
-                <Link to="/analytics">
-                  <div className="flex items-center">
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    <span>View Your Progress</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <DailyTasks className="h-full" />
         </motion.div>
         
         <motion.div
@@ -334,7 +315,25 @@ const Dashboard: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <DailyTasks />
+          <AchievementSystem className="h-full" />
+        </motion.div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <CommunityChallenges className="h-full" />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+        >
+          <ReferralProgram className="h-full" />
         </motion.div>
       </div>
       

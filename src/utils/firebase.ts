@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, where, GeoPoint, Timestamp, addDoc, orderBy, arrayUnion, serverTimestamp, onSnapshot, updateDoc, increment } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { format, subDays, differenceInDays, startOfDay, parseISO, isSameDay, addDays } from 'date-fns';
 
@@ -659,6 +659,146 @@ export const generateGeminiResponse = async (prompt: string, options?) => {
   } catch (error) {
     console.error("Error calling Gemini API:", error);
     return { error: "Failed to call Gemini API. See console for details." };
+  }
+};
+
+export const joinChallenge = async (userId: string, challengeId: string) => {
+  if (!userId || !challengeId) return { success: false, message: 'Invalid parameters' };
+  
+  try {
+    const userChallengesRef = doc(db, 'users', userId, 'userData', 'challenges');
+    const challengeRef = doc(db, 'challenges', challengeId);
+    
+    // Check if user already joined
+    const userChallengesSnap = await getDoc(userChallengesRef);
+    if (userChallengesSnap.exists()) {
+      const joinedChallenges = userChallengesSnap.data().joined || [];
+      const alreadyJoined = joinedChallenges.some((c: any) => c.id === challengeId);
+      
+      if (alreadyJoined) {
+        return { success: false, message: 'Already joined this challenge' };
+      }
+    }
+    
+    // Join challenge
+    await updateDoc(userChallengesRef, {
+      joined: arrayUnion({
+        id: challengeId,
+        joinedAt: new Date(),
+        progress: 0,
+        completed: false
+      })
+    });
+    
+    // Update challenge participants count
+    await updateDoc(challengeRef, {
+      participants: increment(1)
+    });
+    
+    return { success: true, message: 'Challenge joined successfully' };
+  } catch (error) {
+    console.error('Error joining challenge:', error);
+    return { success: false, message: 'Failed to join challenge' };
+  }
+};
+
+export const updateChallengeProgress = async (userId: string, challengeId: string, progress: number) => {
+  if (!userId || !challengeId) return { success: false, message: 'Invalid parameters' };
+  
+  try {
+    const userChallengesRef = doc(db, 'users', userId, 'userData', 'challenges');
+    const userChallengesSnap = await getDoc(userChallengesRef);
+    
+    if (!userChallengesSnap.exists()) {
+      return { success: false, message: 'User has not joined any challenges' };
+    }
+    
+    const joinedChallenges = userChallengesSnap.data().joined || [];
+    const challengeIndex = joinedChallenges.findIndex((c: any) => c.id === challengeId);
+    
+    if (challengeIndex === -1) {
+      return { success: false, message: 'User has not joined this challenge' };
+    }
+    
+    // Update progress
+    joinedChallenges[challengeIndex].progress = progress;
+    
+    // Check if challenge is completed
+    const challengeRef = doc(db, 'challenges', challengeId);
+    const challengeSnap = await getDoc(challengeRef);
+    
+    if (challengeSnap.exists()) {
+      const challenge = challengeSnap.data();
+      if (progress >= challenge.target && !joinedChallenges[challengeIndex].completed) {
+        joinedChallenges[challengeIndex].completed = true;
+        
+        // Award XP
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          xp: increment(challenge.xpReward)
+        });
+      }
+    }
+    
+    await updateDoc(userChallengesRef, {
+      joined: joinedChallenges
+    });
+    
+    return { 
+      success: true, 
+      message: 'Challenge progress updated', 
+      completed: joinedChallenges[challengeIndex].completed 
+    };
+  } catch (error) {
+    console.error('Error updating challenge progress:', error);
+    return { success: false, message: 'Failed to update progress' };
+  }
+};
+
+export const updateAchievement = async (userId: string, achievementId: string, progress: number) => {
+  if (!userId || !achievementId) return { success: false, message: 'Invalid parameters' };
+  
+  try {
+    const achievementsRef = doc(db, 'users', userId, 'userData', 'achievements');
+    const achievementsSnap = await getDoc(achievementsRef);
+    
+    if (!achievementsSnap.exists()) {
+      return { success: false, message: 'No achievements data found' };
+    }
+    
+    const achievements = achievementsSnap.data().achievements || [];
+    const achievementIndex = achievements.findIndex((a: any) => a.id === achievementId);
+    
+    if (achievementIndex === -1) {
+      return { success: false, message: 'Achievement not found' };
+    }
+    
+    // Update progress
+    achievements[achievementIndex].progress = progress;
+    
+    // Check if achievement is completed
+    if (progress >= achievements[achievementIndex].requirement && !achievements[achievementIndex].unlocked) {
+      achievements[achievementIndex].unlocked = true;
+      
+      // Award XP
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        xp: increment(achievements[achievementIndex].xp)
+      });
+    }
+    
+    await updateDoc(achievementsRef, {
+      achievements: achievements
+    });
+    
+    return { 
+      success: true, 
+      message: 'Achievement updated', 
+      unlocked: achievements[achievementIndex].unlocked 
+    };
+  } catch (error) {
+    console.error('Error updating achievement:', error);
+    return { success: false, message: 'Failed to update achievement' };
   }
 };
 

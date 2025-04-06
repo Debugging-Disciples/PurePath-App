@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, Trophy, Confetti } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../utils/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebase';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { CustomBadge } from './ui/custom-badge';
 
 interface Task {
   id: string;
@@ -54,6 +55,7 @@ const defaultTasks: Task[] = [
 const DailyTasks: React.FC<DailyTasksProps> = ({ className }) => {
   const [tasks, setTasks] = useState<Task[]>(defaultTasks);
   const [progress, setProgress] = useState(0);
+  const [showCelebration, setShowCelebration] = useState(false);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -90,6 +92,11 @@ const DailyTasks: React.FC<DailyTasksProps> = ({ className }) => {
             // Calculate progress
             const completedCount = fetchedTasks.filter((t: Task) => t.completed).length;
             setProgress((completedCount / fetchedTasks.length) * 100);
+            
+            // Check if all tasks are completed
+            if (completedCount === fetchedTasks.length && fetchedTasks.length > 0) {
+              setShowCelebration(true);
+            }
           }
         } else {
           // First time setup
@@ -129,11 +136,29 @@ const DailyTasks: React.FC<DailyTasksProps> = ({ className }) => {
         lastUpdated: new Date()
       });
       
-      // Show toast if all tasks completed
+      // Show celebration if all tasks completed
       if (newProgress === 100 && completedCount === updatedTasks.length) {
-        toast.success("🎉 Daily tasks completed!", {
-          description: "Great job completing all your tasks for today!"
-        });
+        setShowCelebration(true);
+        
+        // Also update user's XP or points if using gamification
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const currentXP = userData.xp || 0;
+          const dailyXP = 50; // Award 50 XP for completing all daily tasks
+          
+          await updateDoc(userRef, {
+            xp: currentXP + dailyXP,
+            lastDailyTaskCompletion: new Date()
+          });
+          
+          // Show toast with XP gain
+          toast.success(`🎉 Daily tasks completed! +${dailyXP} XP`, {
+            description: "Great job completing all your tasks for today!",
+            duration: 5000
+          });
+        }
       }
     } catch (error) {
       console.error('Error updating task:', error);
@@ -221,10 +246,70 @@ const DailyTasks: React.FC<DailyTasksProps> = ({ className }) => {
             </div>
           ))}
         </div>
+        
+        {/* Celebration Animation */}
+        <AnimatePresence>
+          {showCelebration && (
+            <motion.div 
+              className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onAnimationComplete={() => {
+                setTimeout(() => setShowCelebration(false), 3000);
+              }}
+            >
+              <div className="relative">
+                {/* Confetti effect */}
+                <motion.div
+                  className="absolute inset-0 flex items-center justify-center"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ 
+                    scale: [0.8, 1.2, 1], 
+                    opacity: [0, 1, 1] 
+                  }}
+                  transition={{ duration: 0.8 }}
+                >
+                  <div className="bg-primary/90 text-white rounded-full p-6 shadow-lg">
+                    <Trophy className="h-12 w-12 animate-pulse" />
+                  </div>
+                </motion.div>
+                
+                {/* Flying particles */}
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute h-2 w-2 rounded-full bg-yellow-400"
+                    initial={{ 
+                      x: 0, 
+                      y: 0, 
+                      opacity: 1 
+                    }}
+                    animate={{ 
+                      x: Math.random() > 0.5 ? Math.random() * 100 : Math.random() * -100,
+                      y: Math.random() > 0.5 ? Math.random() * 100 : Math.random() * -100,
+                      opacity: 0
+                    }}
+                    transition={{ duration: 1.5, delay: i * 0.05 }}
+                  />
+                ))}
+                
+                {/* Celebration message */}
+                <motion.div
+                  className="absolute top-28 left-1/2 transform -translate-x-1/2 bg-white text-primary font-bold px-4 py-2 rounded-lg shadow-lg"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  All tasks completed!
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardContent>
     </Card>
   );
 };
 
 export default DailyTasks;
-
