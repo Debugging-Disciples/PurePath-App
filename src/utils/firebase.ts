@@ -27,6 +27,8 @@ export interface UserProfile {
       url: string;
     };
   };
+  xp?: number;
+  onboardingCompleted?: boolean;
 }
 
 export interface JournalEntry {
@@ -135,7 +137,9 @@ export const register = async (
       joinedAt: Timestamp.now(),
       streakDays: 0,
       streakStartDate: Timestamp.now(),
-      lastCheckIn: Timestamp.now()
+      lastCheckIn: Timestamp.now(),
+      xp: 0,
+      onboardingCompleted: false
     });
     
     toast.success('Welcome to PurePath');

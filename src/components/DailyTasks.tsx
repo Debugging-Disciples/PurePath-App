@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Circle, Trophy, Confetti } from 'lucide-react';
+import { CheckCircle, Circle, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../utils/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';

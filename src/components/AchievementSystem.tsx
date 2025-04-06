@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../utils/auth';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
@@ -128,7 +127,6 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
       if (!currentUser) return;
       
       try {
-        // Fetch user data
         const userRef = doc(db, 'users', currentUser.uid);
         const userSnap = await getDoc(userRef);
         
@@ -137,23 +135,19 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
           const userXP = userData.xp || 0;
           setXP(userXP);
           
-          // Calculate level
           const userLevel = calculateLevel(userXP);
           setLevel(userLevel);
           
-          // Calculate level progress
           const progress = calculateLevelProgress(userXP);
           setLevelProgress(progress);
         }
         
-        // Fetch achievements
         const achievementsRef = doc(db, 'users', currentUser.uid, 'userData', 'achievements');
         const achievementsSnap = await getDoc(achievementsRef);
         
         if (achievementsSnap.exists()) {
           setAchievements(achievementsSnap.data().achievements);
         } else {
-          // Initialize achievements
           await updateDoc(userRef, { 
             xp: userProfile?.xp || 0
           });
@@ -166,7 +160,6 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         }
       } catch (error) {
         console.error('Error fetching achievements:', error);
-        // Initialize with defaults if error
         setAchievements(defaultAchievements);
       }
     };
@@ -182,7 +175,6 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
       let xpGained = 0;
       let newlyUnlocked = null;
       
-      // Check streak achievements
       const streakAchievements = updatedAchievements.filter(a => a.category === 'streak');
       for (let achievement of streakAchievements) {
         const streakProgress = userProfile.streakDays || 0;
@@ -196,7 +188,6 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         }
       }
       
-      // Update achievements in Firestore
       if (xpGained > 0) {
         const userRef = doc(db, 'users', currentUser.uid);
         const achievementsRef = doc(db, 'users', currentUser.uid, 'userData', 'achievements');
@@ -212,7 +203,6 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         setAchievements(updatedAchievements);
         setXP((prev) => prev + xpGained);
         
-        // Show achievement unlocked toast
         if (newlyUnlocked) {
           setRecentAchievement(newlyUnlocked);
           toast.success(`🏆 Achievement Unlocked: ${newlyUnlocked.title}`, {
