@@ -24,6 +24,9 @@ import Profile from "./pages/Profile";
 import Goodbye from "./pages/Goodbye";
 import Journal from "./pages/Journal";
 import JournalEntries from "./pages/JournalEntries";
+import Challenges from "./pages/Challenges";
+import Achievements from "./pages/Achievements";
+import Referrals from "./pages/Referrals";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +109,30 @@ const App = () => (
                   element={
                     <AuthWrapper requireAuth>
                       <JournalEntries />
+                    </AuthWrapper>
+                  }
+                />
+                <Route
+                  path="/challenges"
+                  element={
+                    <AuthWrapper requireAuth>
+                      <Challenges />
+                    </AuthWrapper>
+                  }
+                />
+                <Route
+                  path="/achievements"
+                  element={
+                    <AuthWrapper requireAuth>
+                      <Achievements />
+                    </AuthWrapper>
+                  }
+                />
+                <Route
+                  path="/referrals"
+                  element={
+                    <AuthWrapper requireAuth>
+                      <Referrals />
                     </AuthWrapper>
                   }
                 />

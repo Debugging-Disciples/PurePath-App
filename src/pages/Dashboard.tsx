@@ -13,8 +13,7 @@ import {
   Map,
   HeartPulse,
   CheckIcon,
-  BookOpen,
-  Gift
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,9 +25,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import DatePicker from '@/components/ui/date-picker';
 import DailyTasks from '@/components/DailyTasks';
-import AchievementSystem from '@/components/AchievementSystem';
-import CommunityChallenges from '@/components/CommunityChallenges';
-import ReferralProgram from '@/components/ReferralProgram';
 import OnboardingGuide from '@/components/OnboardingGuide';
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -96,10 +92,9 @@ const Dashboard: React.FC = () => {
   
   const handleCheckIn = async () => {
     if (!currentUser) return;
-    console.log(currentUser.uid)
+    
     try {
       const result = await updateStreak(currentUser.uid);
-      console.log(result)
       
       if (result.success) {
         const updatedProfile = await getUserProfile(currentUser.uid);
@@ -201,7 +196,7 @@ const Dashboard: React.FC = () => {
         </motion.div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -305,35 +300,8 @@ const Dashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className={isMobile ? "order-3" : ""}
         >
           <DailyTasks className="h-full" />
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <AchievementSystem className="h-full" />
-        </motion.div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-        >
-          <CommunityChallenges className="h-full" />
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-        >
-          <ReferralProgram className="h-full" />
         </motion.div>
       </div>
       
@@ -400,6 +368,52 @@ const Dashboard: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="col-span-1 md:col-span-3"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>
+                Access your most used features quickly
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                  <Link to="/meditations">
+                    <HeartPulse className="h-8 w-8 mb-2 text-primary" />
+                    <span>Meditations</span>
+                  </Link>
+                </Button>
+                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                  <Link to="/journal">
+                    <BookOpen className="h-8 w-8 mb-2 text-primary" />
+                    <span>Journal</span>
+                  </Link>
+                </Button>
+                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                  <Link to="/community">
+                    <MessageCircle className="h-8 w-8 mb-2 text-primary" />
+                    <span>Community</span>
+                  </Link>
+                </Button>
+                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                  <Link to="/analytics">
+                    <TrendingUp className="h-8 w-8 mb-2 text-primary" />
+                    <span>Analytics</span>
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </motion.div>
   );
