@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,27 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./utils/auth";
 import AuthWrapper from "./components/AuthWrapper";
-
-// Pages
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import Dashboard from "./pages/Dashboard";
-import Community from "./pages/Community";
-import Meditations from "./pages/Meditations";
-import Analytics from "./pages/Analytics";
-import Map from "./pages/Map";
-import Admin from "./pages/Admin";
-import NotFound from "./pages/NotFound";
-import Navbar from "./components/Navbar";
-import Profile from "./pages/Profile";
-import Goodbye from "./pages/Goodbye";
-import Journal from "./pages/Journal";
-import JournalEntries from "./pages/JournalEntries";
-import Challenges from "./pages/Challenges";
-import Achievements from "./pages/Achievements";
-import Referrals from "./pages/Referrals";
+import Friends from "./pages/Friends";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +112,14 @@ const App = () => (
                   element={
                     <AuthWrapper requireAuth>
                       <Referrals />
+                    </AuthWrapper>
+                  }
+                />
+                <Route
+                  path="/friends"
+                  element={
+                    <AuthWrapper requireAuth>
+                      <Friends />
                     </AuthWrapper>
                   }
                 />

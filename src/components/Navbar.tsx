@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/auth";
 import { logout } from "../utils/firebase";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, ShieldCheck, Award, Trophy, Gift } from "lucide-react";
+import { Moon, Sun, ShieldCheck, Award, Trophy, Gift, Users } from "lucide-react";
 import { db } from "../utils/firebase";
 import { collection, where, query, getDocs } from "firebase/firestore";
 import {
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 const Navbar: React.FC = () => {
   const [userInitials, setUserInitials] = useState("U");
@@ -113,6 +114,11 @@ const Navbar: React.FC = () => {
           )}
         </Button>
   
+        {/* Notification Bell - Only shown when logged in */}
+        {currentUser && (
+          <NotificationsDropdown />
+        )}
+  
         {/* Dropdown Menu */}
         {currentUser ? (
           <DropdownMenu>
@@ -142,6 +148,12 @@ const Navbar: React.FC = () => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Features</DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link to="/friends" className="flex items-center">
+                  <Users className="mr-2 h-4 w-4 text-primary" />
+                  Friends & Accountability
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/achievements" className="flex items-center">
                   <Trophy className="mr-2 h-4 w-4 text-primary" />

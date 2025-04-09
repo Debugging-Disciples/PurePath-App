@@ -39,9 +39,9 @@ import * as z from "zod";
 import { db } from "../utils/firebase";
 import { Trash2, User, Link as LinkIcon } from "lucide-react";
 import SocialMediaLinks from "@/components/SocialMedia";
+import FriendsList from "@/components/FriendsList";
+import PartnerProgress from "@/components/PartnerProgress";
 
-
-// Profile form schema
 const profileFormSchema = z.object({
   username: z
     .string()
@@ -64,7 +64,6 @@ const profileFormSchema = z.object({
     .optional(),
 });
 
-// Password change schema
 const passwordFormSchema = z
   .object({
     currentPassword: z
@@ -92,14 +91,12 @@ const Profile: React.FC = () => {
   const [updateLoading, setUpdateLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!isLoading && !currentUser) {
       navigate("/login");
     }
   }, [currentUser, isLoading, navigate]);
 
-  // Profile form
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -116,8 +113,6 @@ const Profile: React.FC = () => {
     },
   });
 
-  // Get user initials
-  
   useEffect(() => {
     const fetchUserInitials = async () => {
       if (currentUser && currentUser.email) {
@@ -127,7 +122,6 @@ const Profile: React.FC = () => {
           const querySnapshot = await getDocs(q);
           console.log(q);
           if (!querySnapshot.empty) {
-            // Assuming only one document matches the email.
             const userDoc = querySnapshot.docs[0].data();
             const firstname = userDoc.firstName || "";
             const lastname = userDoc.lastName || "";
@@ -141,11 +135,11 @@ const Profile: React.FC = () => {
               setUserInitials("U");
             }
           } else {
-            setUserInitials("U"); // No document found for this email.
+            setUserInitials("U");
           }
         } catch (error) {
           console.error("Error fetching user initials:", error);
-          setUserInitials("U"); // Fallback in case of an error.
+          setUserInitials("U");
         }
       }
     };
@@ -153,8 +147,6 @@ const Profile: React.FC = () => {
     fetchUserInitials();
   }, [currentUser]);
 
-
-  // Update form when userProfile changes
   useEffect(() => {
     if (userProfile) {
       profileForm.reset({
@@ -172,7 +164,6 @@ const Profile: React.FC = () => {
     }
   }, [userProfile]);
 
-  // Password form
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
     defaultValues: {
@@ -249,14 +240,11 @@ const Profile: React.FC = () => {
     );
   }
 
-
   const deleteAccount = async (userId: string) => {
     try {
-      // Delete user data from Firestore
       const userRef = doc(db, 'users', userId);
       await deleteDoc(userRef);
 
-      // Delete the user authentication account
       const user = currentUser;
       if (user) {
         await user.delete();
@@ -304,36 +292,16 @@ const Profile: React.FC = () => {
                   {userProfile.joinedAt?.toDate().toLocaleDateString() || "N/A"}
                 </span>
               </div>
-              {/*               
-              {userProfile.socialMedia?.discord && (
-                <div className="flex items-center gap-2">
-                  <MessageSquare size={16} className="text-muted-foreground" />
-                  <span>Discord: {userProfile.socialMedia.discord}</span>
-                </div>
-              )}
-              
-              {userProfile.socialMedia?.instagram && (
-                <div className="flex items-center gap-2">
-                  <Instagram size={16} className="text-muted-foreground" />
-                  <span>Instagram: {userProfile.socialMedia.instagram}</span>
-                </div>
-              )}
-              
-              {userProfile.socialMedia?.other?.url && (
-                <div className="flex items-center gap-2">
-                  <LinkIcon size={16} className="text-muted-foreground" />
-                  <span>{userProfile.socialMedia.other.name || 'Other'}: {userProfile.socialMedia.other.url}</span>
-                </div>
-              )} */}
             </div>
           </CardContent>
         </Card>
 
         <div className="w-full md:w-2/3">
           <Tabs defaultValue="profile">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
               <TabsTrigger value="profile">Profile Settings</TabsTrigger>
               <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="friends">Friends</TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile">
@@ -493,65 +461,67 @@ const Profile: React.FC = () => {
                     </form>
                   </Form>
 
-                  
-                </CardContent>
-          
-            <CardContent>
-                  <CardTitle>Danger Zone</CardTitle>
-                  <CardDescription className="mt-2">
-                    Permanently delete your account. This action cannot be
-                    undone.
-                  </CardDescription>
-                  <div className="space-y-4 mt-3">
-                    <p className="text-sm text-red-600">
-                      Once you delete your account, there is no going back.
-                      Please be certain.
-                    </p>
-                    <form
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.currentTarget);
-                        const confirmation = formData.get("confirmation");
+                  <CardContent>
+                    <CardTitle>Danger Zone</CardTitle>
+                    <CardDescription className="mt-2">
+                      Permanently delete your account. This action cannot be
+                      undone.
+                    </CardDescription>
+                    <div className="space-y-4 mt-3">
+                      <p className="text-sm text-red-600">
+                        Once you delete your account, there is no going back.
+                        Please be certain.
+                      </p>
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.currentTarget);
+                          const confirmation = formData.get("confirmation");
 
-                        if (confirmation !== "goodbye") {
-                          toast.error("You must type 'goodbye' to confirm.");
-                          return;
-                        }
+                          if (confirmation !== "goodbye") {
+                            toast.error("You must type 'goodbye' to confirm.");
+                            return;
+                          }
 
-                        try {
-                          // Call your delete account function here
-                          await deleteAccount(currentUser.uid);
-                          toast.success("Account deleted successfully.");
-                          navigate("/goodbye");
-                        } catch (error) {
-                          toast.error("Failed to delete account.");
-                          console.error("Account deletion error:", error);
-                        }
-                      }}
-                    >
-                      <div className="flex flex-col gap-4">
-                        <Input
-                          name="confirmation"
-                          placeholder="Type 'goodbye' to confirm"
-                          required
-                        />
-                        <Button
-                          type="submit"
-                          variant="destructive"
-                          color="error"
-                        >
-                          {" "}
-                          <Trash2 />
-                          Delete Account
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
+                          try {
+                            await deleteAccount(currentUser.uid);
+                            toast.success("Account deleted successfully.");
+                            navigate("/goodbye");
+                          } catch (error) {
+                            toast.error("Failed to delete account.");
+                            console.error("Account deletion error:", error);
+                          }
+                        }}
+                      >
+                        <div className="flex flex-col gap-4">
+                          <Input
+                            name="confirmation"
+                            placeholder="Type 'goodbye' to confirm"
+                            required
+                          />
+                          <Button
+                            type="submit"
+                            variant="destructive"
+                            color="error"
+                          >
+                            {" "}
+                            <Trash2 />
+                            Delete Account
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </CardContent>
                 </CardContent>
               </Card>
             </TabsContent>
 
-             
+            <TabsContent value="friends">
+              <div className="space-y-6">
+                <FriendsList />
+                <PartnerProgress />
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </div>

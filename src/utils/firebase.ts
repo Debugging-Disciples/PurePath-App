@@ -29,16 +29,33 @@ export interface UserProfile {
   };
   xp?: number;
   onboardingCompleted?: boolean;
+  friends?: string[];
+  friendRequests?: {
+    incoming: string[];
+    outgoing: string[];
+  };
+  notifications?: {
+    id: string;
+    type: 'achievement' | 'emergency' | 'friendRequest' | 'streakMilestone';
+    message: string;
+    timestamp: Timestamp;
+    read: boolean;
+    senderInfo?: {
+      id: string;
+      name: string;
+    };
+  }[];
+  accountabilityPartners?: string[];
 }
 
 export interface JournalEntry {
   id?: string;
   userId: string;
   timestamp: Date;
-  question: string;    // The prompt that was shown
-  notes: string;       // User's journal response
-  level: number;       // Mood level (1-10)
-  emotions: string[];  // Selected emotions
+  question: string;
+  notes: string;
+  level: number;
+  emotions: string[];
 }
 
 export interface Relapse {
@@ -334,6 +351,21 @@ export const logRelapse = async (userId: string, triggers: string, notes?: strin
       relapses: arrayUnion(relapseObject),
       streakDays: 0
     });
+    
+    // Get partner information
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      if (userData.accountabilityPartners && userData.accountabilityPartners.length > 0) {
+        // Notify accountability partners
+        await notifyAccountabilityPartners(
+          userId, 
+          'emergency', 
+          'is having a difficult time and may need support'
+        );
+      }
+    }
+    
     return { success: true, message: 'Progress reset. Remember: every moment is a new opportunity.' };
   } catch (error) {
     console.error('Error logging relapse:', error);
@@ -789,6 +821,13 @@ export const updateAchievement = async (userId: string, achievementId: string, p
       await updateDoc(userRef, {
         xp: increment(achievements[achievementIndex].xp)
       });
+      
+      // Notify accountability partners
+      await notifyAccountabilityPartners(
+        userId, 
+        'achievement', 
+        `unlocked an achievement: ${achievements[achievementIndex].name}`
+      );
     }
     
     await updateDoc(achievementsRef, {
@@ -803,6 +842,286 @@ export const updateAchievement = async (userId: string, achievementId: string, p
   } catch (error) {
     console.error('Error updating achievement:', error);
     return { success: false, message: 'Failed to update achievement' };
+  }
+};
+
+export const sendFriendRequest = async (senderId: string, recipientId: string): Promise<boolean> => {
+  try {
+    // Update sender's outgoing requests
+    const senderRef = doc(db, 'users', senderId);
+    await updateDoc(senderRef, {
+      'friendRequests.outgoing': arrayUnion(recipientId)
+    });
+    
+    // Update recipient's incoming requests
+    const recipientRef = doc(db, 'users', recipientId);
+    
+    // Get sender's name for the notification
+    const senderDoc = await getDoc(senderRef);
+    const senderData = senderDoc.data();
+    const senderName = `${senderData?.firstName || ''} ${senderData?.lastName || ''}`.trim() || 'Someone';
+    
+    // Add notification for the recipient
+    await updateDoc(recipientRef, {
+      'friendRequests.incoming': arrayUnion(senderId),
+      notifications: arrayUnion({
+        id: `fr-${senderId}-${Date.now()}`,
+        type: 'friendRequest',
+        message: `${senderName} sent you a friend request`,
+        timestamp: Timestamp.now(),
+        read: false,
+        senderInfo: {
+          id: senderId,
+          name: senderName
+        }
+      })
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending friend request:', error);
+    return false;
+  }
+};
+
+export const acceptFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const friendRef = doc(db, 'users', friendId);
+    
+    // Get user's name for the notification
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+    const userName = `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'Someone';
+    
+    // Remove from friend requests and add to friends list
+    await updateDoc(userRef, {
+      'friendRequests.incoming': arrayRemove(friendId),
+      friends: arrayUnion(friendId)
+    });
+    
+    await updateDoc(friendRef, {
+      'friendRequests.outgoing': arrayRemove(userId),
+      friends: arrayUnion(userId),
+      notifications: arrayUnion({
+        id: `fa-${userId}-${Date.now()}`,
+        type: 'friendRequest',
+        message: `${userName} accepted your friend request`,
+        timestamp: Timestamp.now(),
+        read: false,
+        senderInfo: {
+          id: userId,
+          name: userName
+        }
+      })
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error accepting friend request:', error);
+    return false;
+  }
+};
+
+export const declineFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const friendRef = doc(db, 'users', friendId);
+    
+    await updateDoc(userRef, {
+      'friendRequests.incoming': arrayRemove(friendId)
+    });
+    
+    await updateDoc(friendRef, {
+      'friendRequests.outgoing': arrayRemove(userId)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error declining friend request:', error);
+    return false;
+  }
+};
+
+export const removeFriend = async (userId: string, friendId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const friendRef = doc(db, 'users', friendId);
+    
+    await updateDoc(userRef, {
+      friends: arrayRemove(friendId),
+      accountabilityPartners: arrayRemove(friendId)
+    });
+    
+    await updateDoc(friendRef, {
+      friends: arrayRemove(userId),
+      accountabilityPartners: arrayRemove(userId)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    return false;
+  }
+};
+
+export const setAccountabilityPartner = async (userId: string, partnerId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const partnerRef = doc(db, 'users', partnerId);
+    
+    // Get user's name for the notification
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+    const userName = `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'Someone';
+    
+    await updateDoc(userRef, {
+      accountabilityPartners: arrayUnion(partnerId)
+    });
+    
+    await updateDoc(partnerRef, {
+      accountabilityPartners: arrayUnion(userId),
+      notifications: arrayUnion({
+        id: `ap-${userId}-${Date.now()}`,
+        type: 'friendRequest',
+        message: `${userName} has made you their accountability partner`,
+        timestamp: Timestamp.now(),
+        read: false,
+        senderInfo: {
+          id: userId,
+          name: userName
+        }
+      })
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error setting accountability partner:', error);
+    return false;
+  }
+};
+
+export const removeAccountabilityPartner = async (userId: string, partnerId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const partnerRef = doc(db, 'users', partnerId);
+    
+    await updateDoc(userRef, {
+      accountabilityPartners: arrayRemove(partnerId)
+    });
+    
+    await updateDoc(partnerRef, {
+      accountabilityPartners: arrayRemove(userId)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error removing accountability partner:', error);
+    return false;
+  }
+};
+
+export const searchUsers = async (searchTerm: string): Promise<UserProfile[]> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(
+      usersRef,
+      where('email', '>=', searchTerm),
+      where('email', '<=', searchTerm + '\uf8ff')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const users: UserProfile[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      users.push({ id: doc.id, ...doc.data() } as UserProfile);
+    });
+    
+    return users;
+  } catch (error) {
+    console.error('Error searching users:', error);
+    return [];
+  }
+};
+
+export const getNotifications = async (userId: string) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      return userDoc.data().notifications || [];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    return [];
+  }
+};
+
+export const markNotificationAsRead = async (userId: string, notificationId: string) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const notifications = userDoc.data().notifications || [];
+      const updatedNotifications = notifications.map(notification => {
+        if (notification.id === notificationId) {
+          return { ...notification, read: true };
+        }
+        return notification;
+      });
+      
+      await updateDoc(userRef, {
+        notifications: updatedNotifications
+      });
+      
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    return false;
+  }
+};
+
+export const notifyAccountabilityPartners = async (userId: string, type: 'achievement' | 'emergency', message: string) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Your friend';
+      const partners = userData.accountabilityPartners || [];
+      
+      for (const partnerId of partners) {
+        const partnerRef = doc(db, 'users', partnerId);
+        await updateDoc(partnerRef, {
+          notifications: arrayUnion({
+            id: `${type}-${userId}-${Date.now()}`,
+            type,
+            message: `${userName} ${message}`,
+            timestamp: Timestamp.now(),
+            read: false,
+            senderInfo: {
+              id: userId,
+              name: userName
+            }
+          })
+        });
+      }
+      
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error notifying accountability partners:', error);
+    return false;
   }
 };
 
