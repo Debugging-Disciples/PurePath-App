@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -83,7 +82,6 @@ const Dashboard: React.FC = () => {
         );
       }
       
-      // Check if onboarding should be shown
       if (userProfile.onboardingCompleted) {
         setShowOnboarding(false);
       }
@@ -195,6 +193,50 @@ const Dashboard: React.FC = () => {
           <OnboardingGuide />
         </motion.div>
       )}
+      
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="mb-8"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Access your most used features quickly
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                <Link to="/meditations">
+                  <HeartPulse className="h-8 w-8 mb-2 text-primary" />
+                  <span>Meditations</span>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                <Link to="/journal">
+                  <BookOpen className="h-8 w-8 mb-2 text-primary" />
+                  <span>Journal</span>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                <Link to="/community">
+                  <MessageCircle className="h-8 w-8 mb-2 text-primary" />
+                  <span>Community</span>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
+                <Link to="/analytics">
+                  <TrendingUp className="h-8 w-8 mb-2 text-primary" />
+                  <span>Analytics</span>
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <motion.div
@@ -326,9 +368,9 @@ const Dashboard: React.FC = () => {
       
       <div className="mb-8">
         <Tabs defaultValue="meditations">
-          <TabsList className="mb-6">
-            <TabsTrigger value="meditations">Featured Meditations</TabsTrigger>
-            <TabsTrigger value="community">Global Community</TabsTrigger>
+          <TabsList className="mb-6 w-full flex overflow-x-auto">
+            <TabsTrigger value="meditations" className="flex-1">Featured Meditations</TabsTrigger>
+            <TabsTrigger value="community" className="flex-1">Global Community</TabsTrigger>
           </TabsList>
           
           <TabsContent value="meditations">
@@ -368,52 +410,6 @@ const Dashboard: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="col-span-1 md:col-span-3"
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Access your most used features quickly
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
-                  <Link to="/meditations">
-                    <HeartPulse className="h-8 w-8 mb-2 text-primary" />
-                    <span>Meditations</span>
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
-                  <Link to="/journal">
-                    <BookOpen className="h-8 w-8 mb-2 text-primary" />
-                    <span>Journal</span>
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
-                  <Link to="/community">
-                    <MessageCircle className="h-8 w-8 mb-2 text-primary" />
-                    <span>Community</span>
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-auto flex flex-col py-4" asChild>
-                  <Link to="/analytics">
-                    <TrendingUp className="h-8 w-8 mb-2 text-primary" />
-                    <span>Analytics</span>
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </motion.div>
   );
