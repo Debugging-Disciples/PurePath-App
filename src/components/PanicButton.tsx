@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
@@ -6,10 +7,11 @@ import { toast } from 'sonner';
 import { notifyAccountabilityPartners } from '../utils/firebase';
 
 interface PanicButtonProps {
-  onEmergencyClick: () => void;
+  onEmergencyClick?: () => void;
+  className?: string;
 }
 
-const PanicButton: React.FC<PanicButtonProps> = ({ onEmergencyClick }) => {
+const PanicButton: React.FC<PanicButtonProps> = ({ onEmergencyClick, className }) => {
   const { currentUser } = useAuth();
 
   const handleEmergencyClick = async () => {
@@ -22,7 +24,7 @@ const PanicButton: React.FC<PanicButtonProps> = ({ onEmergencyClick }) => {
       );
       
       // Call the provided callback function
-      onEmergencyClick();
+      if (onEmergencyClick) onEmergencyClick();
       toast.error('Emergency support triggered!');
     } else {
       toast.error('You must be logged in to use this feature.');
@@ -30,7 +32,7 @@ const PanicButton: React.FC<PanicButtonProps> = ({ onEmergencyClick }) => {
   };
 
   return (
-    <Button variant="destructive" onClick={handleEmergencyClick}>
+    <Button variant="destructive" className={className} onClick={handleEmergencyClick}>
       <AlertTriangle className="mr-2 h-4 w-4" />
       Emergency Support
     </Button>

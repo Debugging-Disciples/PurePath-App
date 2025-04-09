@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,27 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./utils/auth";
 import AuthWrapper from "./components/AuthWrapper";
 import Friends from "./pages/Friends";
+import Navbar from "./components/Navbar";
+
+// Import all the page components
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import Community from "./pages/Community";
+import Meditations from "./pages/Meditations";
+import Analytics from "./pages/Analytics";
+import MapPage from "./pages/Map"; // Renamed to avoid conflict with JS Map
+import Journal from "./pages/Journal";
+import JournalEntries from "./pages/JournalEntries";
+import Challenges from "./pages/Challenges";
+import Achievements from "./pages/Achievements";
+import Referrals from "./pages/Referrals";
+import Admin from "./pages/Admin";
+import Goodbye from "./pages/Goodbye";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -71,7 +93,7 @@ const App = () => (
                   path="/map"
                   element={
                     <AuthWrapper requireAuth>
-                      <Map />
+                      <MapPage />
                     </AuthWrapper>
                   }
                 />

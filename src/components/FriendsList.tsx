@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from "../utils/auth";
 import {
@@ -26,8 +25,9 @@ import {
   searchUsers, 
   sendFriendRequest, 
   removeFriend, 
-  setAccountabilityPartner, 
-  removeAccountabilityPartner 
+  setAccountabilityPartner,
+  removeAccountabilityPartner,
+  auth 
 } from '../utils/firebase';
 
 const FriendsList: React.FC = () => {

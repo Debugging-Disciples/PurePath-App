@@ -56,6 +56,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
+  const fetchUserProfile = async (user: User) => {
+    try {
+      const profile = await getUserProfile(user.uid);
+      setUserProfile(profile);
+      
+      const adminStatus = await isUserAdmin(user.email || '');
+      setIsAdmin(adminStatus);
+      
+      if (adminStatus) {
+        setUserRole('admin');
+      } else {
+        setUserRole(profile?.role || 'member');
+      }
+      
+      if (profile) {
+        const incomingRequests: UserProfile[] = [];
+        if (profile.friendRequests?.incoming?.length) {
+          for (const requesterId of profile.friendRequests.incoming) {
+            const requesterProfile = await getUserProfile(requesterId);
+            if (requesterProfile) {
+              incomingRequests.push(requesterProfile);
+            }
+          }
+        }
+        
+        setFriendRequests({
+          incoming: incomingRequests,
+          outgoing: profile.friendRequests?.outgoing || []
+        });
+        
+        const friendsList: UserProfile[] = [];
+        if (profile.friends?.length) {
+          for (const friendId of profile.friends) {
+            const friendProfile = await getUserProfile(friendId);
+            if (friendProfile) {
+              friendsList.push(friendProfile);
+            }
+          }
+        }
+        setFriends(friendsList);
+        
+        const partnersList: UserProfile[] = [];
+        if (profile.accountabilityPartners?.length) {
+          for (const partnerId of profile.accountabilityPartners) {
+            const partnerProfile = await getUserProfile(partnerId);
+            if (partnerProfile) {
+              partnersList.push(partnerProfile);
+            }
+          }
+        }
+        setAccountabilityPartners(partnersList);
+        
+        if (profile.notifications) {
+          setNotifications(profile.notifications);
+          
+          const unread = profile.notifications.filter((notification: any) => !notification.read).length;
+          setUnreadNotifications(unread);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUserProfile(null);
+      setUserRole(null);
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(() => {
     if (!auth) {
       console.error("Firebase auth not initialized in AuthProvider");
@@ -72,70 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(user);
       
       if (user) {
-        try {
-          const profile = await getUserProfile(user.uid);
-          setUserProfile(profile);
-          
-          const adminStatus = await isUserAdmin(user.email || '');
-          setIsAdmin(adminStatus);
-          
-          if (adminStatus) {
-            setUserRole('admin');
-          } else {
-            setUserRole(profile?.role || 'member');
-          }
-          
-          if (profile) {
-            const incomingRequests: UserProfile[] = [];
-            if (profile.friendRequests?.incoming?.length) {
-              for (const requesterId of profile.friendRequests.incoming) {
-                const requesterProfile = await getUserProfile(requesterId);
-                if (requesterProfile) {
-                  incomingRequests.push(requesterProfile);
-                }
-              }
-            }
-            
-            setFriendRequests({
-              incoming: incomingRequests,
-              outgoing: profile.friendRequests?.outgoing || []
-            });
-            
-            const friendsList: UserProfile[] = [];
-            if (profile.friends?.length) {
-              for (const friendId of profile.friends) {
-                const friendProfile = await getUserProfile(friendId);
-                if (friendProfile) {
-                  friendsList.push(friendProfile);
-                }
-              }
-            }
-            setFriends(friendsList);
-            
-            const partnersList: UserProfile[] = [];
-            if (profile.accountabilityPartners?.length) {
-              for (const partnerId of profile.accountabilityPartners) {
-                const partnerProfile = await getUserProfile(partnerId);
-                if (partnerProfile) {
-                  partnersList.push(partnerProfile);
-                }
-              }
-            }
-            setAccountabilityPartners(partnersList);
-            
-            if (profile.notifications) {
-              setNotifications(profile.notifications);
-              
-              const unread = profile.notifications.filter((notification: any) => !notification.read).length;
-              setUnreadNotifications(unread);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          setUserProfile(null);
-          setUserRole(null);
-          setIsAdmin(false);
-        }
+        await fetchUserProfile(user);
       } else {
         setUserProfile(null);
         setUserRole(null);

@@ -10,7 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../utils/auth';
-import { acceptFriendRequest, declineFriendRequest, markNotificationAsRead } from '../utils/firebase';
+import { acceptFriendRequest, declineFriendRequest, markNotificationAsRead, auth } from '../utils/firebase';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
