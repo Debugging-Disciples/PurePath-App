@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
@@ -24,7 +25,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import DatePicker from '@/components/ui/date-picker';
 import DailyTasks from '@/components/DailyTasks';
-import OnboardingGuide from '@/components/OnboardingGuide';
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const formatDate = (date: Date) => {
@@ -42,7 +42,6 @@ const Dashboard: React.FC = () => {
   const [isCheckedInToday, setIsCheckedInToday] = useState(false);
   const [isCheckInSide, setIsCheckInSide] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [showOnboarding, setShowOnboarding] = useState(true);
   const isMobile = useIsMobile();
   
   const featuredMeditations = [
@@ -80,10 +79,6 @@ const Dashboard: React.FC = () => {
           lastCheckInDate.getMonth() === today.getMonth() &&
           lastCheckInDate.getFullYear() === today.getFullYear()
         );
-      }
-      
-      if (userProfile.onboardingCompleted) {
-        setShowOnboarding(false);
       }
     }
   }, [currentUser, userProfile]);
@@ -182,17 +177,6 @@ const Dashboard: React.FC = () => {
           {formatDate(new Date())} • Keep moving forward
         </motion.p>
       </div>
-      
-      {showOnboarding && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="mb-8"
-        >
-          <OnboardingGuide />
-        </motion.div>
-      )}
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -366,9 +350,9 @@ const Dashboard: React.FC = () => {
         </Card>
       </motion.div>
       
-      <div className="mb-8">
-        <Tabs defaultValue="meditations">
-          <TabsList className="mb-6 w-full flex overflow-x-auto">
+      <div className={`mb-8 ${isMobile ? "overflow-hidden" : ""}`}>
+        <Tabs defaultValue="meditations" className="w-full">
+          <TabsList className={`mb-6 ${isMobile ? "w-full overflow-x-auto flex" : "w-full flex"}`}>
             <TabsTrigger value="meditations" className="flex-1">Featured Meditations</TabsTrigger>
             <TabsTrigger value="community" className="flex-1">Global Community</TabsTrigger>
           </TabsList>
@@ -398,7 +382,9 @@ const Dashboard: React.FC = () => {
           
           <TabsContent value="community">
             <div className="space-y-6">
-              <CommunityMap />
+              <div className={`${isMobile ? "h-48" : ""}`}>
+                <CommunityMap />
+              </div>
               <div className="text-center">
                 <Button variant="outline" asChild>
                   <Link to="/map">
