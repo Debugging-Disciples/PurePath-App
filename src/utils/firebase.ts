@@ -46,6 +46,10 @@ export interface UserProfile {
     };
   }[];
   accountabilityPartners?: string[];
+  meditations?: any[];
+  journal?: any[];
+  relapses?: any[];
+  streakStartDate?: Timestamp;
 }
 
 export interface JournalEntry {
