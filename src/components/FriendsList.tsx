@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from "../utils/auth";
 import {
   Card,
@@ -32,6 +33,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const FriendsList: React.FC = () => {
   const { friends, accountabilityPartners, friendRequests, refreshUserData, userProfile } = useAuth();
@@ -41,18 +46,39 @@ const FriendsList: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('search');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null);
   const isMobile = useIsMobile();
   
   const referralLink = window.location.origin + '?ref=' + userProfile?.id;
   const emailSubject = "Join me on PurePath";
   const emailBody = `Hey, I'm using PurePath to help with my recovery journey and I'd like you to join me as an accountability partner. Sign up using this link: ${referralLink}`;
 
-  const handleSearch = async () => {
-    if (searchTerm.trim().length < 3) {
-      toast.error('Please enter at least 3 characters');
-      return;
+  useEffect(() => {
+    // Clear previous timer
+    if (typingTimer) clearTimeout(typingTimer);
+    
+    // Only search if we have at least 2 characters
+    if (searchTerm.length >= 2) {
+      const timer = setTimeout(() => {
+        performLiveSearch();
+      }, 300);
+      
+      setTypingTimer(timer);
+    } else {
+      setSearchResults([]);
+      setDropdownOpen(false);
     }
-
+    
+    return () => {
+      if (typingTimer) clearTimeout(typingTimer);
+    };
+  }, [searchTerm]);
+  
+  const performLiveSearch = async () => {
+    if (searchTerm.length < 2) return;
+    
     setIsSearching(true);
     const results = await searchUsersByUsername(searchTerm);
     
@@ -65,6 +91,26 @@ const FriendsList: React.FC = () => {
     
     setSearchResults(filteredResults);
     setIsSearching(false);
+    setDropdownOpen(filteredResults.length > 0);
+  };
+
+  const handleSearch = async () => {
+    if (searchTerm.trim().length < 3) {
+      toast.error('Please enter at least 3 characters');
+      return;
+    }
+
+    setIsSearching(true);
+    await performLiveSearch();
+    setDropdownOpen(false);
+  };
+
+  const handleUserSelect = (userId: string) => {
+    if (selectedUsers.includes(userId)) {
+      setSelectedUsers(selectedUsers.filter(id => id !== userId));
+    } else {
+      setSelectedUsers([...selectedUsers, userId]);
+    }
   };
 
   const handleAddFriend = async (userId: string) => {
@@ -75,8 +121,30 @@ const FriendsList: React.FC = () => {
       toast.success('Friend request sent');
       await refreshUserData();
       setSearchResults(prev => prev.filter(user => user.id !== userId));
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
     } else {
       toast.error('Failed to send friend request');
+    }
+  };
+  
+  const handleAddMultipleFriends = async () => {
+    if (!auth.currentUser?.uid || selectedUsers.length === 0) return;
+    
+    let successCount = 0;
+    for (const userId of selectedUsers) {
+      const result = await sendFriendRequest(auth.currentUser.uid, userId);
+      if (result) {
+        successCount++;
+      }
+    }
+    
+    if (successCount > 0) {
+      toast.success(`Sent ${successCount} friend request${successCount > 1 ? 's' : ''}`);
+      await refreshUserData();
+      setSearchResults(prev => prev.filter(user => !selectedUsers.includes(user.id)));
+      setSelectedUsers([]);
+    } else {
+      toast.error('Failed to send friend requests');
     }
   };
 
@@ -176,20 +244,103 @@ const FriendsList: React.FC = () => {
                 </TabsList>
                 
                 <TabsContent value="search" className="mt-4 space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Search by username..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                    <Button onClick={handleSearch} disabled={isSearching}>
-                      {isSearching ? 'Searching...' : 'Search'}
-                    </Button>
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          placeholder="Search by username..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                          className="w-full"
+                        />
+                        
+                        {dropdownOpen && searchResults.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg">
+                            <div className="p-1 max-h-60 overflow-y-auto">
+                              {searchResults.map((user) => (
+                                <div 
+                                  key={user.id} 
+                                  className={`flex items-center justify-between p-2 ${
+                                    selectedUsers.includes(user.id) 
+                                      ? 'bg-primary/10' 
+                                      : 'hover:bg-secondary/50'
+                                  } rounded-md cursor-pointer`}
+                                  onClick={() => handleUserSelect(user.id)}
+                                >
+                                  <div className="flex items-center">
+                                    <Avatar className="h-7 w-7 mr-2">
+                                      <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="font-medium text-sm">{user.firstName} {user.lastName}</p>
+                                      <p className="text-xs text-muted-foreground">@{user.username}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center">
+                                    {selectedUsers.includes(user.id) && (
+                                      <Check className="h-4 w-4 text-primary" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <Button onClick={handleSearch} disabled={isSearching}>
+                        {isSearching ? 'Searching...' : 'Search'}
+                      </Button>
+                    </div>
                   </div>
                   
+                  {selectedUsers.length > 0 && (
+                    <div className="mt-2 p-2 border rounded-md">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium">{selectedUsers.length} user(s) selected</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setSelectedUsers([])}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {selectedUsers.map(userId => {
+                          const user = searchResults.find(u => u.id === userId);
+                          return user ? (
+                            <Badge 
+                              key={userId} 
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                            >
+                              {user.firstName} {user.lastName}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUserSelect(userId);
+                                }}
+                                className="rounded-full"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        onClick={handleAddMultipleFriends}
+                      >
+                        Send Friend Requests
+                      </Button>
+                    </div>
+                  )}
+                  
                   <div className="max-h-60 overflow-y-auto">
-                    {searchResults.length > 0 ? (
+                    {searchResults.length > 0 && !dropdownOpen ? (
                       <div className="space-y-2">
                         {searchResults.map((user) => (
                           <div key={user.id} className="flex items-center justify-between p-2 border rounded">

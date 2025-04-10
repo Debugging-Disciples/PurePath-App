@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../utils/auth';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
@@ -93,6 +94,11 @@ const defaultAchievements: Achievement[] = [
 export const levelThresholds = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250];
 
 export const calculateLevel = (xp: number): number => {
+  // Start at level 1, not level 0
+  if (xp < levelThresholds[1]) {
+    return 1;
+  }
+  
   for (let i = 1; i < levelThresholds.length; i++) {
     if (xp < levelThresholds[i]) {
       return i;
@@ -103,6 +109,11 @@ export const calculateLevel = (xp: number): number => {
 
 export const calculateLevelProgress = (xp: number): number => {
   const currentLevel = calculateLevel(xp);
+  // If level 1, use 0 to 100 range
+  if (currentLevel === 1) {
+    return (xp / levelThresholds[1]) * 100;
+  }
+  
   const prevThreshold = levelThresholds[currentLevel - 1];
   const nextThreshold = levelThresholds[currentLevel] || prevThreshold * 1.5;
   
@@ -148,15 +159,22 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         if (achievementsSnap.exists()) {
           setAchievements(achievementsSnap.data().achievements);
         } else {
-          await updateDoc(userRef, { 
-            xp: userProfile?.xp || 0
-          });
-          
-          await updateDoc(achievementsRef, {
-            achievements: defaultAchievements
-          });
-          
-          setAchievements(defaultAchievements);
+          // Initialize achievements document if it doesn't exist
+          try {
+            await updateDoc(userRef, { 
+              xp: userProfile?.xp || 0
+            });
+            
+            await updateDoc(achievementsRef, {
+              achievements: defaultAchievements
+            });
+            
+            setAchievements(defaultAchievements);
+          } catch (error) {
+            console.error("Error initializing achievements:", error);
+            // Handle case where document doesn't exist and setDoc is needed
+            setAchievements(defaultAchievements);
+          }
         }
       } catch (error) {
         console.error('Error fetching achievements:', error);
@@ -175,6 +193,7 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
       let xpGained = 0;
       let newlyUnlocked = null;
       
+      // Check streak achievements
       const streakAchievements = updatedAchievements.filter(a => a.category === 'streak');
       for (let achievement of streakAchievements) {
         const streakProgress = userProfile.streakDays || 0;
@@ -185,6 +204,46 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
           newlyUnlocked = achievement;
         } else if (!achievement.unlocked) {
           achievement.progress = streakProgress;
+        }
+      }
+      
+      // Check meditation achievements
+      const meditationAchievements = updatedAchievements.filter(a => a.category === 'meditation');
+      const meditationCount = userProfile.meditations?.length || 0;
+      for (let achievement of meditationAchievements) {
+        if (!achievement.unlocked && meditationCount >= achievement.requirement) {
+          achievement.unlocked = true;
+          achievement.progress = achievement.requirement;
+          xpGained += achievement.xp;
+          newlyUnlocked = achievement;
+        } else if (!achievement.unlocked) {
+          achievement.progress = meditationCount;
+        }
+      }
+      
+      // Check journal achievements
+      const journalAchievements = updatedAchievements.filter(a => a.category === 'journal');
+      const journalCount = userProfile.journal?.length || 0;
+      for (let achievement of journalAchievements) {
+        if (!achievement.unlocked && journalCount >= achievement.requirement) {
+          achievement.unlocked = true;
+          achievement.progress = achievement.requirement;
+          xpGained += achievement.xp;
+          newlyUnlocked = achievement;
+        } else if (!achievement.unlocked) {
+          achievement.progress = journalCount;
+        }
+      }
+      
+      // Check community achievements
+      const communityAchievements = updatedAchievements.filter(a => a.category === 'community');
+      const hasFriends = (userProfile.friends?.length || 0) > 0;
+      for (let achievement of communityAchievements) {
+        if (achievement.id === 'community-first' && !achievement.unlocked && hasFriends) {
+          achievement.unlocked = true;
+          achievement.progress = achievement.requirement;
+          xpGained += achievement.xp;
+          newlyUnlocked = achievement;
         }
       }
       
@@ -202,6 +261,11 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         
         setAchievements(updatedAchievements);
         setXP((prev) => prev + xpGained);
+        
+        // Update level and progress based on new XP
+        const newLevel = calculateLevel(xp + xpGained);
+        setLevel(newLevel);
+        setLevelProgress(calculateLevelProgress(xp + xpGained));
         
         if (newlyUnlocked) {
           setRecentAchievement(newlyUnlocked);
