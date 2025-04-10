@@ -135,13 +135,14 @@ export const register = async (
   firstName: string, 
   lastName: string, 
   gender: string, 
-  location?: { country: string; state?: string | null }
+  location?: { country: string; state?: string | null },
+  referralId?: string
 ) => {
   try {
     console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
-    await setDoc(doc(db, 'users', userCredential.user.uid), {
+    const userData: any = {
       username,
       firstName,
       lastName,
@@ -156,8 +157,21 @@ export const register = async (
       streakStartDate: Timestamp.now(),
       lastCheckIn: Timestamp.now(),
       xp: 0,
-      onboardingCompleted: false
-    });
+      onboardingCompleted: false,
+      friendRequests: {
+        incoming: [],
+        outgoing: []
+      },
+      friends: [],
+      accountabilityPartners: []
+    };
+
+    await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+    
+    // Handle referral if present
+    if (referralId) {
+      await handleReferral(referralId, userCredential.user.uid);
+    }
     
     toast.success('Welcome to PurePath');
     return true;
@@ -165,6 +179,44 @@ export const register = async (
     console.error('Registration error:', error);
     toast.error('Registration failed: ' + error.message);
     return false;
+  }
+};
+
+const handleReferral = async (referrerId: string, newUserId: string) => {
+  try {
+    // Check if referrer exists
+    const referrerDoc = await getDoc(doc(db, 'users', referrerId));
+    if (!referrerDoc.exists()) return;
+    
+    // Get user info for notifications
+    const newUserDoc = await getDoc(doc(db, 'users', newUserId));
+    if (!newUserDoc.exists()) return;
+    
+    const newUserData = newUserDoc.data();
+    const userName = `${newUserData.firstName || ''} ${newUserData.lastName || ''}`.trim() || 'A new user';
+    
+    // Automatically create friendship
+    await updateDoc(doc(db, 'users', referrerId), {
+      friends: arrayUnion(newUserId),
+      notifications: arrayUnion({
+        id: `ref-${newUserId}-${Date.now()}`,
+        type: 'friendRequest',
+        message: `${userName} joined using your referral link and was added as a friend`,
+        timestamp: Timestamp.now(),
+        read: false,
+        senderInfo: {
+          id: newUserId,
+          name: userName
+        }
+      })
+    });
+    
+    await updateDoc(doc(db, 'users', newUserId), {
+      friends: arrayUnion(referrerId)
+    });
+    
+  } catch (error) {
+    console.error('Error handling referral:', error);
   }
 };
 
@@ -860,6 +912,7 @@ export const sendFriendRequest = async (senderId: string, recipientId: string): 
     const senderDoc = await getDoc(senderRef);
     const senderData = senderDoc.data();
     const senderName = `${senderData?.firstName || ''} ${senderData?.lastName || ''}`.trim() || 'Someone';
+    const senderUsername = senderData?.username || '';
     
     // Add notification for the recipient
     await updateDoc(recipientRef, {
@@ -867,7 +920,7 @@ export const sendFriendRequest = async (senderId: string, recipientId: string): 
       notifications: arrayUnion({
         id: `fr-${senderId}-${Date.now()}`,
         type: 'friendRequest',
-        message: `${senderName} sent you a friend request`,
+        message: `${senderName} (@${senderUsername}) sent you a friend request`,
         timestamp: Timestamp.now(),
         read: false,
         senderInfo: {
@@ -1021,13 +1074,13 @@ export const removeAccountabilityPartner = async (userId: string, partnerId: str
   }
 };
 
-export const searchUsers = async (searchTerm: string): Promise<UserProfile[]> => {
+export const searchUsersByUsername = async (username: string): Promise<UserProfile[]> => {
   try {
     const usersRef = collection(db, 'users');
     const q = query(
       usersRef,
-      where('email', '>=', searchTerm),
-      where('email', '<=', searchTerm + '\uf8ff')
+      where('username', '>=', username),
+      where('username', '<=', username + '\uf8ff')
     );
     
     const querySnapshot = await getDocs(q);
@@ -1039,7 +1092,7 @@ export const searchUsers = async (searchTerm: string): Promise<UserProfile[]> =>
     
     return users;
   } catch (error) {
-    console.error('Error searching users:', error);
+    console.error('Error searching users by username:', error);
     return [];
   }
 };

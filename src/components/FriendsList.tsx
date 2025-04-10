@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from "../utils/auth";
 import {
@@ -19,23 +20,33 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users, UserPlus, X, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Users, UserPlus, X, Check, AlertTriangle, Eye, EyeOff, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 import { 
-  searchUsers, 
+  searchUsersByUsername, 
   sendFriendRequest, 
   removeFriend, 
   setAccountabilityPartner,
   removeAccountabilityPartner,
   auth 
 } from '../utils/firebase';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const FriendsList: React.FC = () => {
-  const { friends, accountabilityPartners, friendRequests, refreshUserData } = useAuth();
+  const { friends, accountabilityPartners, friendRequests, refreshUserData, userProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('search');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const isMobile = useIsMobile();
+  
+  const referralLink = window.location.origin + '?ref=' + userProfile?.id;
+  const emailSubject = "Join me on PurePath";
+  const emailBody = `Hey, I'm using PurePath to help with my recovery journey and I'd like you to join me as an accountability partner. Sign up using this link: ${referralLink}`;
 
   const handleSearch = async () => {
     if (searchTerm.trim().length < 3) {
@@ -44,7 +55,7 @@ const FriendsList: React.FC = () => {
     }
 
     setIsSearching(true);
-    const results = await searchUsers(searchTerm);
+    const results = await searchUsersByUsername(searchTerm);
     
     // Filter out the current user and existing friends
     const filteredResults = results.filter(user => {
@@ -106,6 +117,17 @@ const FriendsList: React.FC = () => {
     }
   };
 
+  const handleSendInvite = () => {
+    if (!inviteEmail.trim() || !inviteEmail.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    window.location.href = `mailto:${inviteEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    toast.success('Email client opened with invitation');
+    setInviteEmail('');
+  };
+
   const getInitials = (user: any) => {
     if (!user) return 'U';
     
@@ -140,59 +162,98 @@ const FriendsList: React.FC = () => {
                 Add Friend
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Find Friends</DialogTitle>
+                <DialogTitle>Connect with Friends</DialogTitle>
                 <DialogDescription>
-                  Search for users by email address
+                  Find users by username or invite by email
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="flex gap-2 my-4">
-                <Input
-                  placeholder="Search by email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-                <Button onClick={handleSearch} disabled={isSearching}>
-                  {isSearching ? 'Searching...' : 'Search'}
-                </Button>
-              </div>
-              
-              <div className="max-h-60 overflow-y-auto">
-                {searchResults.length > 0 ? (
-                  <div className="space-y-2">
-                    {searchResults.map((user) => (
-                      <div key={user.id} className="flex items-center justify-between p-2 border rounded">
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarFallback>{getInitials(user)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{user.firstName} {user.lastName}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddFriend(user.id)}
-                        >
-                          <UserPlus className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
-                      </div>
-                    ))}
+              <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="mt-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="search">Search Username</TabsTrigger>
+                  <TabsTrigger value="invite">Invite by Email</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="search" className="mt-4 space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search by username..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    />
+                    <Button onClick={handleSearch} disabled={isSearching}>
+                      {isSearching ? 'Searching...' : 'Search'}
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-4">
-                    {isSearching ? 'Searching...' : searchTerm ? 'No users found' : 'Search for users by email'}
-                  </p>
-                )}
-              </div>
+                  
+                  <div className="max-h-60 overflow-y-auto">
+                    {searchResults.length > 0 ? (
+                      <div className="space-y-2">
+                        {searchResults.map((user) => (
+                          <div key={user.id} className="flex items-center justify-between p-2 border rounded">
+                            <div className="flex items-center">
+                              <Avatar className="h-8 w-8 mr-2">
+                                <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{user.firstName} {user.lastName}</p>
+                                <p className="text-xs text-muted-foreground">@{user.username}</p>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleAddFriend(user.id)}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">
+                        {isSearching ? 'Searching...' : searchTerm ? 'No users found' : 'Search for users by username'}
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="invite" className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="email-invite" className="text-sm font-medium">
+                      Invite a friend via email
+                    </label>
+                    <Input
+                      id="email-invite"
+                      placeholder="friend@example.com"
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                    />
+                    <div className="pt-2">
+                      <label className="text-sm font-medium">Invitation message</label>
+                      <Textarea 
+                        className="mt-1 min-h-[100px]" 
+                        value={emailBody}
+                        readOnly
+                      />
+                    </div>
+                    <Button 
+                      className="w-full mt-2" 
+                      onClick={handleSendInvite}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
               
-              <DialogFooter>
+              <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Close
                 </Button>
@@ -213,7 +274,7 @@ const FriendsList: React.FC = () => {
                     </Avatar>
                     <div>
                       <p className="font-medium">{request.firstName} {request.lastName}</p>
-                      <p className="text-xs text-muted-foreground">{request.email}</p>
+                      <p className="text-xs text-muted-foreground">@{request.username}</p>
                     </div>
                   </div>
                   <div className="flex space-x-1">
@@ -253,7 +314,7 @@ const FriendsList: React.FC = () => {
                     <AvatarFallback>{getInitials(friend)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-wrap">
                       <p className="font-medium">{friend.firstName} {friend.lastName}</p>
                       {isAccountabilityPartner(friend.id) && (
                         <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded">
@@ -261,7 +322,7 @@ const FriendsList: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{friend.email}</p>
+                    <p className="text-xs text-muted-foreground">@{friend.username}</p>
                   </div>
                 </div>
                 <div className="flex space-x-2">

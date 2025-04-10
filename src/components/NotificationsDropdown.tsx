@@ -7,7 +7,8 @@ import {
   Award,
   AlertTriangle,
   Check,
-  X
+  X,
+  Send
 } from 'lucide-react';
 import { useAuth } from '../utils/auth';
 import { acceptFriendRequest, declineFriendRequest, markNotificationAsRead, auth } from '../utils/firebase';
@@ -24,25 +25,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const NotificationsDropdown: React.FC = () => {
   const { notifications, unreadNotifications, refreshUserData } = useAuth();
   const navigate = useNavigate();
 
-  const handleAcceptFriendRequest = async (senderId: string) => {
+  const handleAcceptFriendRequest = async (senderId: string, notificationId: string) => {
     const result = await acceptFriendRequest(auth.currentUser?.uid || '', senderId);
     if (result) {
       toast.success('Friend request accepted');
+      await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
       refreshUserData();
     } else {
       toast.error('Failed to accept friend request');
     }
   };
 
-  const handleDeclineFriendRequest = async (senderId: string) => {
+  const handleDeclineFriendRequest = async (senderId: string, notificationId: string) => {
     const result = await declineFriendRequest(auth.currentUser?.uid || '', senderId);
     if (result) {
       toast.success('Friend request declined');
+      await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
       refreshUserData();
     } else {
       toast.error('Failed to decline friend request');
@@ -62,6 +66,19 @@ const NotificationsDropdown: React.FC = () => {
     }
     
     refreshUserData();
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (parts.length === 1) {
+      return parts[0][0].toUpperCase();
+    }
+    
+    return '?';
   };
 
   const renderNotificationIcon = (type: string) => {
@@ -103,9 +120,13 @@ const NotificationsDropdown: React.FC = () => {
                 .map((notification, index) => (
                   <React.Fragment key={notification.id || index}>
                     {notification.type === 'friendRequest' && notification.senderInfo ? (
-                      <div className="px-2 py-2 hover:bg-accent flex items-center justify-between">
+                      <div className={`px-2 py-2 hover:bg-accent flex items-center justify-between ${!notification.read ? 'bg-accent/40' : ''}`}>
                         <div className="flex items-center">
-                          {renderNotificationIcon(notification.type)}
+                          {notification.senderInfo && (
+                            <Avatar className="h-8 w-8 mr-2">
+                              <AvatarFallback>{getInitials(notification.senderInfo.name)}</AvatarFallback>
+                            </Avatar>
+                          )}
                           <div>
                             <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>
                               {notification.message}
@@ -115,24 +136,26 @@ const NotificationsDropdown: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex space-x-1">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleAcceptFriendRequest(notification.senderInfo.id)}
-                            className="h-7 w-7 p-0"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleDeclineFriendRequest(notification.senderInfo.id)}
-                            className="h-7 w-7 p-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {notification.message.includes('sent you a friend request') && (
+                          <div className="flex space-x-1">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleAcceptFriendRequest(notification.senderInfo.id, notification.id)}
+                              className="h-7 w-7 p-0"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleDeclineFriendRequest(notification.senderInfo.id, notification.id)}
+                              className="h-7 w-7 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <DropdownMenuItem 
