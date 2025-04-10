@@ -16,11 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import NotificationsDropdown from "./NotificationsDropdown";
 
 const Navbar: React.FC = () => {
   const [userInitials, setUserInitials] = useState("U");
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, friendRequests } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -152,6 +153,11 @@ const Navbar: React.FC = () => {
                 <Link to="/friends" className="flex items-center">
                   <Users className="mr-2 h-4 w-4 text-primary" />
                   Friends & Accountability
+                  {friendRequests && friendRequests.incoming && friendRequests.incoming.length > 0 && (
+                    <Badge variant="destructive" className="ml-2 px-1 py-0 min-w-5 text-xs flex justify-center">
+                      {friendRequests.incoming.length}
+                    </Badge>
+                  )}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
