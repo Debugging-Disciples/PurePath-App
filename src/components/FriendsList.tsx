@@ -49,7 +49,6 @@ const FriendsList: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null);
-  const [requestInProgress, setRequestInProgress] = useState(false);
   const isMobile = useIsMobile();
   
   const referralLink = window.location.origin + '?ref=' + userProfile?.id;
@@ -117,59 +116,35 @@ const FriendsList: React.FC = () => {
   const handleAddFriend = async (userId: string) => {
     if (!auth.currentUser?.uid) return;
     
-    setRequestInProgress(true);
-    
-    try {
-      const result = await sendFriendRequest(auth.currentUser.uid, userId);
-      if (result) {
-        toast.success('Friend request sent successfully', {
-          description: 'They will be notified of your request',
-          icon: <Check className="h-4 w-4 text-green-500" />
-        });
-        await refreshUserData();
-        setSearchResults(prev => prev.filter(user => user.id !== userId));
-        setSelectedUsers(prev => prev.filter(id => id !== userId));
-      } else {
-        toast.error('Failed to send friend request');
-      }
-    } catch (error) {
-      console.error('Error sending friend request:', error);
-      toast.error('An error occurred while sending the request');
-    } finally {
-      setRequestInProgress(false);
+    const result = await sendFriendRequest(auth.currentUser.uid, userId);
+    if (result) {
+      toast.success('Friend request sent');
+      await refreshUserData();
+      setSearchResults(prev => prev.filter(user => user.id !== userId));
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
+    } else {
+      toast.error('Failed to send friend request');
     }
   };
   
   const handleAddMultipleFriends = async () => {
     if (!auth.currentUser?.uid || selectedUsers.length === 0) return;
     
-    setRequestInProgress(true);
+    let successCount = 0;
+    for (const userId of selectedUsers) {
+      const result = await sendFriendRequest(auth.currentUser.uid, userId);
+      if (result) {
+        successCount++;
+      }
+    }
     
-    try {
-      let successCount = 0;
-      for (const userId of selectedUsers) {
-        const result = await sendFriendRequest(auth.currentUser.uid, userId);
-        if (result) {
-          successCount++;
-        }
-      }
-      
-      if (successCount > 0) {
-        toast.success(`Request${successCount > 1 ? 's' : ''} sent successfully`, {
-          description: `Sent ${successCount} friend request${successCount > 1 ? 's' : ''}`,
-          icon: <Check className="h-4 w-4 text-green-500" />
-        });
-        await refreshUserData();
-        setSearchResults(prev => prev.filter(user => !selectedUsers.includes(user.id)));
-        setSelectedUsers([]);
-      } else {
-        toast.error('Failed to send friend requests');
-      }
-    } catch (error) {
-      console.error('Error sending multiple friend requests:', error);
-      toast.error('An error occurred while sending requests');
-    } finally {
-      setRequestInProgress(false);
+    if (successCount > 0) {
+      toast.success(`Sent ${successCount} friend request${successCount > 1 ? 's' : ''}`);
+      await refreshUserData();
+      setSearchResults(prev => prev.filter(user => !selectedUsers.includes(user.id)));
+      setSelectedUsers([]);
+    } else {
+      toast.error('Failed to send friend requests');
     }
   };
 
@@ -358,18 +333,8 @@ const FriendsList: React.FC = () => {
                         className="w-full" 
                         size="sm"
                         onClick={handleAddMultipleFriends}
-                        disabled={requestInProgress}
                       >
-                        {requestInProgress ? (
-                          <span className="flex items-center">
-                            <span className="animate-spin mr-2">⏳</span> Sending...
-                          </span>
-                        ) : (
-                          <>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Send Friend Requests
-                          </>
-                        )}
+                        Send Friend Requests
                       </Button>
                     </div>
                   )}
@@ -392,14 +357,8 @@ const FriendsList: React.FC = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => handleAddFriend(user.id)}
-                              disabled={requestInProgress}
-                              className="flex items-center"
                             >
-                              {requestInProgress ? (
-                                <span className="animate-spin mr-1">⏳</span>
-                              ) : (
-                                <UserPlus className="h-4 w-4 mr-1" />
-                              )}
+                              <UserPlus className="h-4 w-4 mr-1" />
                               Add
                             </Button>
                           </div>
