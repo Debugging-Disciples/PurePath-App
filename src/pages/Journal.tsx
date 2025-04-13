@@ -330,7 +330,7 @@ const Journal: React.FC = () => {
         <div className="mt-12 text-center">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/journal-entries')}
+            onClick={() => navigate('/journal/entries')}
             className={`w-full py-6 journal-past-entries ${
               currentTheme === 'light' 
                 ? 'border-slate-300 hover:bg-slate-100' 
@@ -338,7 +338,7 @@ const Journal: React.FC = () => {
             }`}
           >
             <BookOpen className="mr-2 h-5 w-5" />
-            Show Past Entries
+            Show past entries
           </Button>
         </div>
       </div>
