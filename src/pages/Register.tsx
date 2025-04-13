@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { register, auth, isUserAdmin } from '../utils/firebase';
+import { register, auth } from '../utils/firebase';
 import { useAuth } from '../utils/auth';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -97,6 +97,8 @@ const Register = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (loading) return; // Prevent multiple submissions
+    
     setLoading(true);
     
     try {
@@ -118,11 +120,39 @@ const Register = () => {
       
       if (result) {
         toast.success("Registration successful! Redirecting to dashboard...");
-        navigate('/dashboard');
+        // Short delay to allow toast to be seen before redirect
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
+      } else {
+        // If register returns false but no error thrown
+        toast.error("Registration failed. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      toast.error("Registration failed. Please try again.");
+      
+      // More specific error messages based on Firebase error codes
+      if (error.code === 'auth/email-already-in-use') {
+        toast.error("This email is already registered. Please log in instead.");
+        form.setError('email', { 
+          type: 'manual', 
+          message: 'This email is already in use'
+        });
+      } else if (error.code === 'auth/invalid-email') {
+        toast.error("Invalid email format.");
+        form.setError('email', { 
+          type: 'manual', 
+          message: 'Invalid email format'
+        });
+      } else if (error.code === 'auth/weak-password') {
+        toast.error("Password is too weak. Please use a stronger password.");
+        form.setError('password', { 
+          type: 'manual', 
+          message: 'Password is too weak'
+        });
+      } else {
+        toast.error(`Registration failed: ${error.message || "Unknown error occurred"}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -299,7 +329,10 @@ const Register = () => {
                         onChange={(value) => {
                           field.onChange(value);
                           setCountry(value);
-                          form.setValue('state', '');
+                          // Reset state if country changes
+                          if (value !== 'United States') {
+                            form.setValue('state', '');
+                          }
                         }} 
                       />
                     </FormControl>
@@ -324,7 +357,11 @@ const Register = () => {
                 />
               )}
               
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading}
+              >
                 {loading ? "Creating Account..." : "Sign Up"}
               </Button>
             </form>
