@@ -273,8 +273,8 @@ const Journal: React.FC = () => {
                   className={`text-md py-2 px-4 cursor-pointer ${
                     selectedEmotions.includes(emotion) 
                       ? moodScore > 5 
-                        ? currentTheme === 'light' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700' 
-                        : currentTheme === 'light' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700' 
+                        ? currentTheme === 'light' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white' 
+                        : currentTheme === 'light' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white' 
                       : currentTheme === 'light' ? 'hover:bg-slate-200 text-slate-800' : 'hover:bg-white/10'
                   }`}
                   onClick={() => handleEmotionToggle(emotion)}
