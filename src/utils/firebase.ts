@@ -1091,7 +1091,12 @@ export const searchUsersByUsername = async (username: string): Promise<UserProfi
     const users: UserProfile[] = [];
     
     querySnapshot.forEach((doc) => {
-      users.push({ id: doc.id, ...doc.data() } as UserProfile);
+      users.push({ 
+        id: doc.id, 
+        username: doc.data().username,
+        firstName: doc.data().firstName,
+        lastName: doc.data().lastName
+      } as UserProfile);
     });
     
     return users;
@@ -1179,6 +1184,28 @@ export const notifyAccountabilityPartners = async (userId: string, type: 'achiev
   } catch (error) {
     console.error('Error notifying accountability partners:', error);
     return false;
+  }
+};
+
+export const getAllUsernames = async (): Promise<UserProfile[]> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const querySnapshot = await getDocs(usersRef);
+    const users: UserProfile[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      users.push({ 
+        id: doc.id, 
+        username: doc.data().username,
+        firstName: doc.data().firstName,
+        lastName: doc.data().lastName
+      } as UserProfile);
+    });
+    
+    return users;
+  } catch (error) {
+    console.error('Error fetching all usernames:', error);
+    return [];
   }
 };
 

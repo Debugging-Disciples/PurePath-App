@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "../utils/auth";
 import {
@@ -24,6 +23,7 @@ import { Users, UserPlus, X, Check, AlertTriangle, Eye, EyeOff, Mail, Send } fro
 import { toast } from "sonner";
 import { 
   searchUsersByUsername, 
+  getAllUsernames,
   sendFriendRequest, 
   removeFriend, 
   setAccountabilityPartner,
@@ -49,18 +49,43 @@ const FriendsList: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null);
+  const [allUsernames, setAllUsernames] = useState<any[]>([]);
+  const [isLoadingUsernames, setIsLoadingUsernames] = useState(false);
   const isMobile = useIsMobile();
   
   const referralLink = window.location.origin + '?ref=' + userProfile?.id;
   const emailSubject = "Join me on PurePath";
   const emailBody = `Hey, I'm using PurePath to help with my recovery journey and I'd like you to join me as an accountability partner. Sign up using this link: ${referralLink}`;
 
+  // Fetch all usernames on component mount
+  useEffect(() => {
+    const fetchAllUsernames = async () => {
+      setIsLoadingUsernames(true);
+      try {
+        const usernamesData = await getAllUsernames();
+        // Filter out current user and existing friends/requests
+        const filteredUsernames = usernamesData.filter((user: any) => {
+          return user.id !== auth.currentUser?.uid && 
+                 !friends.some(friend => friend.id === user.id) &&
+                 !friendRequests.outgoing.includes(user.id);
+        });
+        setAllUsernames(filteredUsernames);
+      } catch (error) {
+        console.error("Error fetching usernames:", error);
+      } finally {
+        setIsLoadingUsernames(false);
+      }
+    };
+    
+    fetchAllUsernames();
+  }, [friends, friendRequests.outgoing]);
+
   useEffect(() => {
     // Clear previous timer
     if (typingTimer) clearTimeout(typingTimer);
     
-    // Only search if we have at least 2 characters
-    if (searchTerm.length >= 2) {
+    // Only search if we have at least 3 characters
+    if (searchTerm.length >= 3) {
       const timer = setTimeout(() => {
         performLiveSearch();
       }, 300);
@@ -76,22 +101,19 @@ const FriendsList: React.FC = () => {
     };
   }, [searchTerm]);
   
-  const performLiveSearch = async () => {
-    if (searchTerm.length < 2) return;
+  const performLiveSearch = () => {
+    if (searchTerm.length < 3) return;
     
     setIsSearching(true);
-    const results = await searchUsersByUsername(searchTerm);
     
-    // Filter out the current user and existing friends
-    const filteredResults = results.filter(user => {
-      return user.id !== auth.currentUser?.uid && 
-             !friends.some(friend => friend.id === user.id) &&
-             !friendRequests.outgoing.includes(user.id);
-    });
+    // Filter from the already fetched usernames list
+    const results = allUsernames.filter((user: any) => 
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     
-    setSearchResults(filteredResults);
+    setSearchResults(results);
     setIsSearching(false);
-    setDropdownOpen(filteredResults.length > 0);
+    setDropdownOpen(results.length > 0);
   };
 
   const handleSearch = async () => {
@@ -122,6 +144,9 @@ const FriendsList: React.FC = () => {
       await refreshUserData();
       setSearchResults(prev => prev.filter(user => user.id !== userId));
       setSelectedUsers(prev => prev.filter(id => id !== userId));
+      
+      // Remove the user from allUsernames as well
+      setAllUsernames(prev => prev.filter(user => user.id !== userId));
     } else {
       toast.error('Failed to send friend request');
     }
@@ -141,7 +166,10 @@ const FriendsList: React.FC = () => {
     if (successCount > 0) {
       toast.success(`Sent ${successCount} friend request${successCount > 1 ? 's' : ''}`);
       await refreshUserData();
+      
+      // Remove all selected users from both search results and allUsernames
       setSearchResults(prev => prev.filter(user => !selectedUsers.includes(user.id)));
+      setAllUsernames(prev => prev.filter(user => !selectedUsers.includes(user.id)));
       setSelectedUsers([]);
     } else {
       toast.error('Failed to send friend requests');
@@ -248,7 +276,7 @@ const FriendsList: React.FC = () => {
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Input
-                          placeholder="Search by username..."
+                          placeholder="Search by username (min. 3 characters)..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -366,7 +394,7 @@ const FriendsList: React.FC = () => {
                       </div>
                     ) : (
                       <p className="text-center text-muted-foreground py-4">
-                        {isSearching ? 'Searching...' : searchTerm ? 'No users found' : 'Search for users by username'}
+                        {isSearching ? 'Searching...' : searchTerm.length >= 3 ? 'No users found' : 'Type at least 3 characters to search'}
                       </p>
                     )}
                   </div>
