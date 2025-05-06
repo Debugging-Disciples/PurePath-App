@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "../utils/auth";
 import {
@@ -25,6 +26,7 @@ import {
   searchUsersByUsername, 
   getAllUsernames,
   sendFriendRequest, 
+  cancelFriendRequest,
   removeFriend, 
   setAccountabilityPartner,
   removeAccountabilityPartner,
@@ -173,6 +175,18 @@ const FriendsList: React.FC = () => {
       setSelectedUsers([]);
     } else {
       toast.error('Failed to send friend requests');
+    }
+  };
+
+  const handleCancelFriendRequest = async (userId: string) => {
+    if (!auth.currentUser?.uid) return;
+    
+    const result = await cancelFriendRequest(auth.currentUser.uid, userId);
+    if (result) {
+      toast.success('Friend request canceled');
+      await refreshUserData();
+    } else {
+      toast.error('Failed to cancel friend request');
     }
   };
 
@@ -483,6 +497,46 @@ const FriendsList: React.FC = () => {
           </div>
         )}
         
+        {/* Display outgoing friend requests */}
+        {friendRequests.outgoing.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-sm font-medium mb-2">Pending Requests</h4>
+            <div className="space-y-2">
+              {friendRequests.outgoing.map((userId) => {
+                // Find the user details from allUsernames array
+                const user = allUsernames.find(u => u.id === userId);
+                return (
+                  <div key={userId} className="flex items-center justify-between p-2 border rounded bg-muted/10">
+                    <div className="flex items-center">
+                      <Avatar className="h-8 w-8 mr-2">
+                        <AvatarFallback>{user ? getInitials(user) : 'U'}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center">
+                          <p className="font-medium">{user ? `${user.firstName} ${user.lastName}` : 'User'}</p>
+                          <span className="ml-2 px-1.5 py-0.5 text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 rounded">
+                            Pending
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{user ? `@${user.username}` : ''}</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCancelFriendRequest(userId)}
+                      title="Cancel request"
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
         <div className="space-y-3">
           {friends.length > 0 ? (
             friends.map((friend) => (
@@ -548,3 +602,4 @@ const FriendsList: React.FC = () => {
 };
 
 export default FriendsList;
+

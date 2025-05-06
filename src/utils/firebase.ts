@@ -941,6 +941,27 @@ export const sendFriendRequest = async (senderId: string, recipientId: string): 
   }
 };
 
+export const cancelFriendRequest = async (senderId: string, recipientId: string): Promise<boolean> => {
+  try {
+    // Remove from sender's outgoing requests
+    const senderRef = doc(db, 'users', senderId);
+    await updateDoc(senderRef, {
+      'friendRequests.outgoing': arrayRemove(recipientId)
+    });
+    
+    // Remove from recipient's incoming requests
+    const recipientRef = doc(db, 'users', recipientId);
+    await updateDoc(recipientRef, {
+      'friendRequests.incoming': arrayRemove(senderId)
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error canceling friend request:', error);
+    return false;
+  }
+};
+
 export const acceptFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
   try {
     const userRef = doc(db, 'users', userId);
