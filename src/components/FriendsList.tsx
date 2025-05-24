@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../utils/auth";
 import {
   Card,
@@ -20,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Users, UserPlus, X, Check, AlertTriangle, Eye, EyeOff, Mail, Send } from "lucide-react";
+import { Users, UserPlus, X, Check, AlertTriangle, Eye, EyeOff, Mail, Send, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { 
   searchUsersByUsername, 
@@ -39,6 +40,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { createGroupChat } from '../utils/chatService';
 
 const FriendsList: React.FC = () => {
   const { friends, accountabilityPartners, friendRequests, refreshUserData, userProfile } = useAuth();
@@ -54,6 +56,7 @@ const FriendsList: React.FC = () => {
   const [allUsernames, setAllUsernames] = useState<any[]>([]);
   const [isLoadingUsernames, setIsLoadingUsernames] = useState(false);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   const referralLink = window.location.origin + '?ref=' + userProfile?.id;
   const emailSubject = "Join me on PurePath";
@@ -248,6 +251,21 @@ const FriendsList: React.FC = () => {
 
   const isAccountabilityPartner = (userId: string) => {
     return accountabilityPartners.some(partner => partner.id === userId);
+  };
+
+  const handleMessageFriend = async (friend: any) => {
+    if (!auth.currentUser?.uid) return;
+    
+    // First check if a chat already exists with this friend
+    // For now, we'll create a new chat every time (this would be improved in a real app)
+    const chatId = await createGroupChat(`Chat with ${friend.firstName}`, auth.currentUser.uid, [friend.id]);
+    
+    if (chatId) {
+      // Navigate to the community chat with this specific chat room selected
+      navigate(`/community?chat=${chatId}`);
+    } else {
+      toast.error('Failed to create chat');
+    }
   };
 
   return (
@@ -474,9 +492,7 @@ const FriendsList: React.FC = () => {
                       size="sm" 
                       variant="outline" 
                       className="h-8 w-8 p-0"
-                      onClick={() => {
-                        // Handle accept friend request
-                      }}
+                      onClick={() => handleAcceptFriendRequest(request.id)}
                     >
                       <Check className="h-4 w-4" />
                     </Button>
@@ -484,9 +500,7 @@ const FriendsList: React.FC = () => {
                       size="sm" 
                       variant="outline" 
                       className="h-8 w-8 p-0"
-                      onClick={() => {
-                        // Handle decline friend request
-                      }}
+                      onClick={() => handleDeclineFriendRequest(request.id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -558,6 +572,14 @@ const FriendsList: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleMessageFriend(friend)}
+                    title="Message"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                  </Button>
                   {isAccountabilityPartner(friend.id) ? (
                     <Button
                       size="sm"
@@ -602,4 +624,3 @@ const FriendsList: React.FC = () => {
 };
 
 export default FriendsList;
-

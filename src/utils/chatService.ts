@@ -284,8 +284,33 @@ export const createGroupChat = async (name: string, userId: string, initialParti
     // Ensure the creator is included in participants
     const participants = [userId, ...initialParticipants.filter(id => id !== userId)];
     
-    // Create new room document
+    // Check if a chat already exists between these exact participants
     const roomsRef = collection(db, 'rooms');
+    const roomsSnapshot = await getDocs(roomsRef);
+    
+    let existingRoomId = null;
+    
+    // Only check for existing 1-on-1 chats (2 participants)
+    if (participants.length === 2) {
+      for (const doc of roomsSnapshot.docs) {
+        const roomData = doc.data();
+        // Check if this is a private chat between these two users
+        if (roomData.type === 'group' && 
+            roomData.participants.length === 2 && 
+            roomData.participants.includes(participants[0]) && 
+            roomData.participants.includes(participants[1])) {
+          existingRoomId = doc.id;
+          break;
+        }
+      }
+      
+      if (existingRoomId) {
+        console.log('Found existing chat room:', existingRoomId);
+        return existingRoomId;
+      }
+    }
+    
+    // Create new room document
     const roomData = {
       name: name.trim(),
       participants,
