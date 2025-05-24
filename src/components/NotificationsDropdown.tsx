@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -24,43 +23,61 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { UserProfile } from '../utils/firebase';
+import type { Timestamp } from 'firebase/firestore';
+
+interface Notification {
+  id: string;
+  type: 'achievement' | 'emergency' | 'friendRequest' | 'streakMilestone' | string;
+  message: string;
+  timestamp: Timestamp;
+  read: boolean;
+  senderInfo?: {
+    id: string;
+    name: string;
+  };
+}
 
 const NotificationsDropdown: React.FC = () => {
-  const { notifications, unreadNotifications, refreshUserData } = useAuth();
+  const { notifications, unreadNotifications, refreshUserData, friends } = useAuth();
   const navigate = useNavigate();
+  const [localNotifications, setLocalNotifications] = React.useState<Notification[]>(notifications);
 
-  const handleAcceptFriendRequest = async (senderId: string) => {
+  React.useEffect(() => {
+    setLocalNotifications(notifications);
+  }, [notifications]);
+
+  const handleAcceptFriendRequest = async (senderId: string, notificationId: string) => {
     const result = await acceptFriendRequest(auth.currentUser?.uid || '', senderId);
     if (result) {
       toast.success('Friend request accepted');
+      setLocalNotifications((prev) => prev.filter(n => n.id !== notificationId));
       refreshUserData();
     } else {
       toast.error('Failed to accept friend request');
     }
   };
 
-  const handleDeclineFriendRequest = async (senderId: string) => {
+  const handleDeclineFriendRequest = async (senderId: string, notificationId: string) => {
     const result = await declineFriendRequest(auth.currentUser?.uid || '', senderId);
     if (result) {
       toast.success('Friend request declined');
+      setLocalNotifications((prev) => prev.filter(n => n.id !== notificationId));
       refreshUserData();
     } else {
       toast.error('Failed to decline friend request');
     }
   };
 
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
       await markNotificationAsRead(auth.currentUser?.uid || '', notification.id);
     }
-    
-    // Navigate based on notification type
     if (notification.type === 'achievement') {
       navigate('/achievements');
     } else if (notification.type === 'emergency') {
       navigate(`/profile?friend=${notification.senderInfo?.id}`);
     }
-    
     refreshUserData();
   };
 
@@ -96,10 +113,32 @@ const NotificationsDropdown: React.FC = () => {
         <DropdownMenuLabel>Notifications</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="max-h-[400px] overflow-y-auto">
-          {notifications && notifications.length > 0 ? (
+          {localNotifications && localNotifications.length > 0 ? (
             <DropdownMenuGroup>
-              {notifications
-                .sort((a, b) => b.timestamp.toDate() - a.timestamp.toDate())
+              {localNotifications
+                .sort((a, b) => {
+                  let aTime: number;
+                  let bTime: number;
+                  if (typeof a.timestamp.toMillis === 'function') {
+                    aTime = a.timestamp.toMillis();
+                  } else if (typeof a.timestamp === 'number') {
+                    aTime = a.timestamp;
+                  } else if (typeof a.timestamp === 'object' && 'seconds' in a.timestamp) {
+                    aTime = (a.timestamp as { seconds: number }).seconds * 1000;
+                  } else {
+                    aTime = Date.now(); // fallback
+                  }
+                  if (typeof b.timestamp.toMillis === 'function') {
+                    bTime = b.timestamp.toMillis();
+                  } else if (typeof b.timestamp === 'number') {
+                    bTime = b.timestamp;
+                  } else if (typeof b.timestamp === 'object' && 'seconds' in b.timestamp) {
+                    bTime = (b.timestamp as { seconds: number }).seconds * 1000;
+                  } else {
+                    bTime = Date.now(); // fallback
+                  }
+                  return bTime - aTime;
+                })
                 .map((notification, index) => (
                   <React.Fragment key={notification.id || index}>
                     {notification.type === 'friendRequest' && notification.senderInfo ? (
@@ -119,7 +158,7 @@ const NotificationsDropdown: React.FC = () => {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            onClick={() => handleAcceptFriendRequest(notification.senderInfo.id)}
+                            onClick={() => handleAcceptFriendRequest(notification.senderInfo!.id, notification.id)}
                             className="h-7 w-7 p-0"
                           >
                             <Check className="h-4 w-4" />
@@ -127,7 +166,7 @@ const NotificationsDropdown: React.FC = () => {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            onClick={() => handleDeclineFriendRequest(notification.senderInfo.id)}
+                            onClick={() => handleDeclineFriendRequest(notification.senderInfo!.id, notification.id)}
                             className="h-7 w-7 p-0"
                           >
                             <X className="h-4 w-4" />
