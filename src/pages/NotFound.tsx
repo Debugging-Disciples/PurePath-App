@@ -6,6 +6,7 @@ import { Home } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const NotFound: React.FC = () => {
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary/20 p-4">
       <motion.div 
