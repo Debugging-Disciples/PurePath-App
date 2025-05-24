@@ -44,6 +44,7 @@ const NotificationsDropdown: React.FC = () => {
   const { notifications, unreadNotifications, refreshUserData, friends } = useAuth();
   const navigate = useNavigate();
   const [localNotifications, setLocalNotifications] = React.useState<Notification[]>(notifications);
+  const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
     setLocalNotifications(notifications);
@@ -53,7 +54,7 @@ const NotificationsDropdown: React.FC = () => {
     const result = await acceptFriendRequest(auth.currentUser?.uid || '', senderId);
     if (result) {
       toast.success('Friend request accepted');
-      setLocalNotifications((prev) => prev.filter(n => n.id !== notificationId));
+      setDismissedIds(prev => new Set(prev).add(notificationId));
       refreshUserData();
     } else {
       toast.error('Failed to accept friend request');
@@ -64,7 +65,7 @@ const NotificationsDropdown: React.FC = () => {
     const result = await declineFriendRequest(auth.currentUser?.uid || '', senderId);
     if (result) {
       toast.success('Friend request declined');
-      setLocalNotifications((prev) => prev.filter(n => n.id !== notificationId));
+      setDismissedIds(prev => new Set(prev).add(notificationId));
       refreshUserData();
     } else {
       toast.error('Failed to decline friend request');
@@ -131,6 +132,7 @@ const NotificationsDropdown: React.FC = () => {
           {localNotifications && localNotifications.length > 0 ? (
             <DropdownMenuGroup>
               {localNotifications
+                .filter(n => !dismissedIds.has(n.id))
                 .sort((a, b) => {
                   let aTime: number;
                   let bTime: number;
