@@ -93,6 +93,10 @@ const defaultAchievements: Achievement[] = [
 export const levelThresholds = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250];
 
 export const calculateLevel = (xp: number): number => {
+  if (xp < levelThresholds[1]) {
+    return 1;
+  }
+  
   for (let i = 1; i < levelThresholds.length; i++) {
     if (xp < levelThresholds[i]) {
       return i;
@@ -103,6 +107,10 @@ export const calculateLevel = (xp: number): number => {
 
 export const calculateLevelProgress = (xp: number): number => {
   const currentLevel = calculateLevel(xp);
+  if (currentLevel === 1) {
+    return (xp / levelThresholds[1]) * 100;
+  }
+  
   const prevThreshold = levelThresholds[currentLevel - 1];
   const nextThreshold = levelThresholds[currentLevel] || prevThreshold * 1.5;
   
@@ -112,12 +120,19 @@ export const calculateLevelProgress = (xp: number): number => {
 interface AchievementSystemProps {
   className?: string;
   showAll?: boolean;
+  filter?: "inProgress" | "completed" | "all";
+  defaultLevel?: number;
 }
 
-const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAll = false }) => {
+const AchievementSystem: React.FC<AchievementSystemProps> = ({ 
+  className, 
+  showAll = false, 
+  filter = "all", 
+  defaultLevel = 1 
+}) => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [xp, setXP] = useState(0);
-  const [level, setLevel] = useState(1);
+  const [level, setLevel] = useState(defaultLevel);
   const [levelProgress, setLevelProgress] = useState(0);
   const [recentAchievement, setRecentAchievement] = useState<Achievement | null>(null);
   const { currentUser, userProfile } = useAuth();
@@ -148,15 +163,20 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         if (achievementsSnap.exists()) {
           setAchievements(achievementsSnap.data().achievements);
         } else {
-          await updateDoc(userRef, { 
-            xp: userProfile?.xp || 0
-          });
-          
-          await updateDoc(achievementsRef, {
-            achievements: defaultAchievements
-          });
-          
-          setAchievements(defaultAchievements);
+          try {
+            await updateDoc(userRef, { 
+              xp: userProfile?.xp || 0
+            });
+            
+            await updateDoc(achievementsRef, {
+              achievements: defaultAchievements
+            });
+            
+            setAchievements(defaultAchievements);
+          } catch (error) {
+            console.error("Error initializing achievements:", error);
+            setAchievements(defaultAchievements);
+          }
         }
       } catch (error) {
         console.error('Error fetching achievements:', error);
@@ -188,6 +208,43 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         }
       }
       
+      const meditationAchievements = updatedAchievements.filter(a => a.category === 'meditation');
+      const meditationCount = userProfile.meditations?.length || 0;
+      for (let achievement of meditationAchievements) {
+        if (!achievement.unlocked && meditationCount >= achievement.requirement) {
+          achievement.unlocked = true;
+          achievement.progress = achievement.requirement;
+          xpGained += achievement.xp;
+          newlyUnlocked = achievement;
+        } else if (!achievement.unlocked) {
+          achievement.progress = meditationCount;
+        }
+      }
+      
+      const journalAchievements = updatedAchievements.filter(a => a.category === 'journal');
+      const journalCount = userProfile.journal?.length || 0;
+      for (let achievement of journalAchievements) {
+        if (!achievement.unlocked && journalCount >= achievement.requirement) {
+          achievement.unlocked = true;
+          achievement.progress = achievement.requirement;
+          xpGained += achievement.xp;
+          newlyUnlocked = achievement;
+        } else if (!achievement.unlocked) {
+          achievement.progress = journalCount;
+        }
+      }
+      
+      const communityAchievements = updatedAchievements.filter(a => a.category === 'community');
+      const hasFriends = (userProfile.friends?.length || 0) > 0;
+      for (let achievement of communityAchievements) {
+        if (achievement.id === 'community-first' && !achievement.unlocked && hasFriends) {
+          achievement.unlocked = true;
+          achievement.progress = achievement.requirement;
+          xpGained += achievement.xp;
+          newlyUnlocked = achievement;
+        }
+      }
+      
       if (xpGained > 0) {
         const userRef = doc(db, 'users', currentUser.uid);
         const achievementsRef = doc(db, 'users', currentUser.uid, 'userData', 'achievements');
@@ -202,6 +259,10 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
         
         setAchievements(updatedAchievements);
         setXP((prev) => prev + xpGained);
+        
+        const newLevel = calculateLevel(xp + xpGained);
+        setLevel(newLevel);
+        setLevelProgress(calculateLevelProgress(xp + xpGained));
         
         if (newlyUnlocked) {
           setRecentAchievement(newlyUnlocked);
@@ -237,9 +298,18 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
     }
   };
 
+  const filteredAchievements = achievements.filter(achievement => {
+    if (filter === "inProgress") {
+      return !achievement.unlocked && achievement.progress > 0;
+    } else if (filter === "completed") {
+      return achievement.unlocked;
+    }
+    return true;
+  });
+
   const displayedAchievements = showAll 
-    ? achievements 
-    : achievements.filter(a => a.unlocked || a.progress > 0).slice(0, 3);
+    ? filteredAchievements 
+    : filteredAchievements.slice(0, 3);
 
   return (
     <Card className={className}>
@@ -260,56 +330,62 @@ const AchievementSystem: React.FC<AchievementSystemProps> = ({ className, showAl
       </CardHeader>
       <CardContent>
         <h3 className="font-medium mb-3">
-          {showAll ? 'All Achievements' : 'Recent Achievements'}
+          {showAll ? (filter === "inProgress" ? 'In Progress' : filter === "completed" ? 'Completed' : 'All Achievements') : 'Recent Achievements'}
         </h3>
         
-        <div className="space-y-3">
-          {displayedAchievements.map((achievement) => (
-            <motion.div
-              key={achievement.id}
-              className={`flex items-center p-3 rounded-md ${achievement.unlocked ? 'bg-primary/10' : 'bg-secondary/20'}`}
-              whileHover={{ scale: 1.02 }}
-              initial={achievement === recentAchievement ? { scale: 0.9, opacity: 0 } : { scale: 1, opacity: 1 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="mr-3">
-                {getAchievementIcon(achievement.icon)}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-sm">{achievement.title}</p>
-                  {achievement.unlocked ? (
-                    <CustomBadge variant="success">Unlocked</CustomBadge>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {achievement.progress}/{achievement.requirement}
-                    </p>
+        {displayedAchievements.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground">
+            <p>No achievements {filter === "inProgress" ? "in progress" : filter === "completed" ? "completed" : ""} yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {displayedAchievements.map((achievement) => (
+              <motion.div
+                key={achievement.id}
+                className={`flex items-center p-3 rounded-md ${achievement.unlocked ? 'bg-primary/10' : 'bg-secondary/20'}`}
+                whileHover={{ scale: 1.02 }}
+                initial={achievement === recentAchievement ? { scale: 0.9, opacity: 0 } : { scale: 1, opacity: 1 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="mr-3">
+                  {getAchievementIcon(achievement.icon)}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm">{achievement.title}</p>
+                    {achievement.unlocked ? (
+                      <CustomBadge variant="success">Unlocked</CustomBadge>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {achievement.progress}/{achievement.requirement}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
+                  {!achievement.unlocked && (
+                    <div className="w-full mt-2">
+                      <div className="h-1 bg-secondary/30 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full"
+                          style={{ width: `${(achievement.progress / achievement.requirement) * 100}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
-                {!achievement.unlocked && (
-                  <div className="w-full mt-2">
-                    <div className="h-1 bg-secondary/30 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${(achievement.progress / achievement.requirement) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
+              </motion.div>
+            ))}
+            
+            {!showAll && achievements.length > 3 && (
+              <div className="text-center mt-2">
+                <CustomBadge variant="outline" className="cursor-pointer hover:bg-secondary">
+                  View all achievements
+                </CustomBadge>
               </div>
-            </motion.div>
-          ))}
-          
-          {!showAll && achievements.length > 3 && (
-            <div className="text-center mt-2">
-              <CustomBadge variant="outline" className="cursor-pointer hover:bg-secondary">
-                View all achievements
-              </CustomBadge>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

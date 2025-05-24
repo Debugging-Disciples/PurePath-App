@@ -273,8 +273,8 @@ const Journal: React.FC = () => {
                   className={`text-md py-2 px-4 cursor-pointer ${
                     selectedEmotions.includes(emotion) 
                       ? moodScore > 5 
-                        ? currentTheme === 'light' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700' 
-                        : currentTheme === 'light' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700' 
+                        ? currentTheme === 'light' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white' 
+                        : currentTheme === 'light' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white' 
                       : currentTheme === 'light' ? 'hover:bg-slate-200 text-slate-800' : 'hover:bg-white/10'
                   }`}
                   onClick={() => handleEmotionToggle(emotion)}
@@ -330,7 +330,7 @@ const Journal: React.FC = () => {
         <div className="mt-12 text-center">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/journal-entries')}
+            onClick={() => navigate('/journal/entries')}
             className={`w-full py-6 journal-past-entries ${
               currentTheme === 'light' 
                 ? 'border-slate-300 hover:bg-slate-100' 
@@ -338,7 +338,7 @@ const Journal: React.FC = () => {
             }`}
           >
             <BookOpen className="mr-2 h-5 w-5" />
-            Show Past Entries
+            Show past entries
           </Button>
         </div>
       </div>

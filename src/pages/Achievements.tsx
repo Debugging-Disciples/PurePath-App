@@ -33,7 +33,25 @@ const Achievements: React.FC = () => {
         </motion.p>
       </div>
       
-      <AchievementSystem className="w-full" showAll={true} />
+      <div className="grid gap-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <h2 className="text-xl font-semibold mb-4">In Progress</h2>
+          <AchievementSystem className="w-full" showAll={true} filter="inProgress" defaultLevel={1} />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <h2 className="text-xl font-semibold mb-4">Completed</h2>
+          <AchievementSystem className="w-full" showAll={true} filter="completed" defaultLevel={1} />
+        </motion.div>
+      </div>
     </motion.div>
   );
 };

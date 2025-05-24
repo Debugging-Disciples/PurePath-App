@@ -46,6 +46,10 @@ export interface UserProfile {
     };
   }[];
   accountabilityPartners?: string[];
+  meditations?: any[];
+  journal?: any[];
+  relapses?: any[];
+  streakStartDate?: Timestamp;
 }
 
 export interface JournalEntry {
@@ -135,13 +139,14 @@ export const register = async (
   firstName: string, 
   lastName: string, 
   gender: string, 
-  location?: { country: string; state?: string | null }
+  location?: { country: string; state?: string | null },
+  referralId?: string
 ) => {
   try {
     console.log('Registering user with gender:', gender);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
-    await setDoc(doc(db, 'users', userCredential.user.uid), {
+    const userData: any = {
       username,
       firstName,
       lastName,
@@ -156,8 +161,21 @@ export const register = async (
       streakStartDate: Timestamp.now(),
       lastCheckIn: Timestamp.now(),
       xp: 0,
-      onboardingCompleted: false
-    });
+      onboardingCompleted: false,
+      friendRequests: {
+        incoming: [],
+        outgoing: []
+      },
+      friends: [],
+      accountabilityPartners: []
+    };
+
+    await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+    
+    // Handle referral if present
+    if (referralId) {
+      await handleReferral(referralId, userCredential.user.uid);
+    }
     
     toast.success('Welcome to PurePath');
     return true;
@@ -165,6 +183,44 @@ export const register = async (
     console.error('Registration error:', error);
     toast.error('Registration failed: ' + error.message);
     return false;
+  }
+};
+
+const handleReferral = async (referrerId: string, newUserId: string) => {
+  try {
+    // Check if referrer exists
+    const referrerDoc = await getDoc(doc(db, 'users', referrerId));
+    if (!referrerDoc.exists()) return;
+    
+    // Get user info for notifications
+    const newUserDoc = await getDoc(doc(db, 'users', newUserId));
+    if (!newUserDoc.exists()) return;
+    
+    const newUserData = newUserDoc.data();
+    const userName = `${newUserData.firstName || ''} ${newUserData.lastName || ''}`.trim() || 'A new user';
+    
+    // Automatically create friendship
+    await updateDoc(doc(db, 'users', referrerId), {
+      friends: arrayUnion(newUserId),
+      notifications: arrayUnion({
+        id: `ref-${newUserId}-${Date.now()}`,
+        type: 'friendRequest',
+        message: `${userName} joined using your referral link and was added as a friend`,
+        timestamp: Timestamp.now(),
+        read: false,
+        senderInfo: {
+          id: newUserId,
+          name: userName
+        }
+      })
+    });
+    
+    await updateDoc(doc(db, 'users', newUserId), {
+      friends: arrayUnion(referrerId)
+    });
+    
+  } catch (error) {
+    console.error('Error handling referral:', error);
   }
 };
 
@@ -860,6 +916,7 @@ export const sendFriendRequest = async (senderId: string, recipientId: string): 
     const senderDoc = await getDoc(senderRef);
     const senderData = senderDoc.data();
     const senderName = `${senderData?.firstName || ''} ${senderData?.lastName || ''}`.trim() || 'Someone';
+    const senderUsername = senderData?.username || '';
     
     // Add notification for the recipient
     await updateDoc(recipientRef, {
@@ -867,7 +924,7 @@ export const sendFriendRequest = async (senderId: string, recipientId: string): 
       notifications: arrayUnion({
         id: `fr-${senderId}-${Date.now()}`,
         type: 'friendRequest',
-        message: `${senderName} sent you a friend request`,
+        message: `${senderName} (@${senderUsername}) sent you a friend request`,
         timestamp: Timestamp.now(),
         read: false,
         senderInfo: {
@@ -884,37 +941,62 @@ export const sendFriendRequest = async (senderId: string, recipientId: string): 
   }
 };
 
-export const acceptFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
+export const cancelFriendRequest = async (senderId: string, recipientId: string): Promise<boolean> => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const friendRef = doc(db, 'users', friendId);
-    
-    // Get user's name for the notification
-    const userDoc = await getDoc(userRef);
-    const userData = userDoc.data();
-    const userName = `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'Someone';
-    
-    // Remove from friend requests and add to friends list
-    await updateDoc(userRef, {
-      'friendRequests.incoming': arrayRemove(friendId),
-      friends: arrayUnion(friendId)
+    // Remove from sender's outgoing requests
+    const senderRef = doc(db, 'users', senderId);
+    await updateDoc(senderRef, {
+      'friendRequests.outgoing': arrayRemove(recipientId)
     });
     
-    await updateDoc(friendRef, {
-      'friendRequests.outgoing': arrayRemove(userId),
-      friends: arrayUnion(userId),
-      notifications: arrayUnion({
-        id: `fa-${userId}-${Date.now()}`,
-        type: 'friendRequest',
-        message: `${userName} accepted your friend request`,
-        timestamp: Timestamp.now(),
-        read: false,
-        senderInfo: {
-          id: userId,
-          name: userName
-        }
-      })
+    // Remove from recipient's incoming requests
+    const recipientRef = doc(db, 'users', recipientId);
+    await updateDoc(recipientRef, {
+      'friendRequests.incoming': arrayRemove(senderId)
     });
+    
+    return true;
+  } catch (error) {
+    console.error('Error canceling friend request:', error);
+    return false;
+  }
+};
+
+export const acceptFriendRequest = async (currentUserId: string, requesterId: string) => {
+  try {
+    const currentUserRef = doc(db, 'users', currentUserId);
+    const requesterRef = doc(db, 'users', requesterId);
+    
+    // Get both user documents
+    const currentUserDoc = await getDoc(currentUserRef);
+    const requesterDoc = await getDoc(requesterRef);
+    
+    if (!currentUserDoc.exists() || !requesterDoc.exists()) {
+      return false;
+    }
+    
+    // Update current user's document
+    await updateDoc(currentUserRef, {
+      friends: arrayUnion(requesterId),
+      'friendRequests.incoming': arrayRemove(requesterId)
+    });
+    
+    // Update requester's document
+    await updateDoc(requesterRef, {
+      friends: arrayUnion(currentUserId),
+      'friendRequests.outgoing': arrayRemove(currentUserId)
+    });
+    
+    // Create a notification for the requester
+    const notificationData = {
+      type: 'friend_request_accepted',
+      fromUserId: currentUserId,
+      message: `${currentUserDoc.data()?.firstName || 'Someone'} accepted your friend request`,
+      read: false,
+      timestamp: serverTimestamp()
+    };
+    
+    await addDoc(collection(db, 'users', requesterId, 'notifications'), notificationData);
     
     return true;
   } catch (error) {
@@ -923,17 +1005,19 @@ export const acceptFriendRequest = async (userId: string, friendId: string): Pro
   }
 };
 
-export const declineFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
+export const declineFriendRequest = async (currentUserId: string, requesterId: string) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const friendRef = doc(db, 'users', friendId);
+    const currentUserRef = doc(db, 'users', currentUserId);
+    const requesterRef = doc(db, 'users', requesterId);
     
-    await updateDoc(userRef, {
-      'friendRequests.incoming': arrayRemove(friendId)
+    // Update current user's document to remove the incoming request
+    await updateDoc(currentUserRef, {
+      'friendRequests.incoming': arrayRemove(requesterId)
     });
     
-    await updateDoc(friendRef, {
-      'friendRequests.outgoing': arrayRemove(userId)
+    // Update requester's document to remove the outgoing request
+    await updateDoc(requesterRef, {
+      'friendRequests.outgoing': arrayRemove(currentUserId)
     });
     
     return true;
@@ -1021,25 +1105,30 @@ export const removeAccountabilityPartner = async (userId: string, partnerId: str
   }
 };
 
-export const searchUsers = async (searchTerm: string): Promise<UserProfile[]> => {
+export const searchUsersByUsername = async (username: string): Promise<UserProfile[]> => {
   try {
     const usersRef = collection(db, 'users');
     const q = query(
       usersRef,
-      where('email', '>=', searchTerm),
-      where('email', '<=', searchTerm + '\uf8ff')
+      where('username', '>=', username),
+      where('username', '<=', username + '\uf8ff')
     );
     
     const querySnapshot = await getDocs(q);
     const users: UserProfile[] = [];
     
     querySnapshot.forEach((doc) => {
-      users.push({ id: doc.id, ...doc.data() } as UserProfile);
+      users.push({ 
+        id: doc.id, 
+        username: doc.data().username,
+        firstName: doc.data().firstName,
+        lastName: doc.data().lastName
+      } as UserProfile);
     });
     
     return users;
   } catch (error) {
-    console.error('Error searching users:', error);
+    console.error('Error searching users by username:', error);
     return [];
   }
 };
@@ -1122,6 +1211,28 @@ export const notifyAccountabilityPartners = async (userId: string, type: 'achiev
   } catch (error) {
     console.error('Error notifying accountability partners:', error);
     return false;
+  }
+};
+
+export const getAllUsernames = async (): Promise<UserProfile[]> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const querySnapshot = await getDocs(usersRef);
+    const users: UserProfile[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      users.push({ 
+        id: doc.id, 
+        username: doc.data().username,
+        firstName: doc.data().firstName,
+        lastName: doc.data().lastName
+      } as UserProfile);
+    });
+    
+    return users;
+  } catch (error) {
+    console.error('Error fetching all usernames:', error);
+    return [];
   }
 };
 

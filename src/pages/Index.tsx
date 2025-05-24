@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../utils/auth';
-import { ArrowRight, HeartPulse, Shield, Zap, Users, Map, Lock, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowRight, HeartPulse, Shield, Zap, Users, Map, Lock, AlertTriangle, Clock, CheckSquare, BookOpen, Bell, Calendar, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent } from '@/components/ui/card';
 
 const Index: React.FC = () => {
   const { currentUser, firebaseInitialized } = useAuth();
@@ -17,6 +18,7 @@ const Index: React.FC = () => {
   const staggerContainer = {
     animate: { transition: { staggerChildren: 0.1 } }
   };
+  
   
   const features = [
     {
@@ -48,6 +50,39 @@ const Index: React.FC = () => {
       title: 'Complete Privacy',
       description: 'Your journey is personal. All data is private and anonymized.',
       icon: <Lock className="h-10 w-10 text-primary" />
+    }
+  ];
+
+  const keyFeatures = [
+    {
+      title: "Streak Tracker",
+      description: "Track your daily progress with a continuous streak counter",
+      icon: <Trophy className="h-6 w-6 text-amber-500" />
+    },
+    {
+      title: "Daily Check-ins",
+      description: "Mark each successful day to maintain accountability",
+      icon: <CheckSquare className="h-6 w-6 text-green-500" />
+    },
+    {
+      title: "Journal System",
+      description: "Record thoughts and progress with guided reflection prompts",
+      icon: <BookOpen className="h-6 w-6 text-blue-500" />
+    },
+    {
+      title: "Meditation Library",
+      description: "Access specialized techniques like urge surfing to overcome challenges",
+      icon: <HeartPulse className="h-6 w-6 text-purple-500" />
+    },
+    {
+      title: "Accountability Partners",
+      description: "Connect with trusted friends for support and encouragement",
+      icon: <Users className="h-6 w-6 text-orange-500" />
+    },
+    {
+      title: "Emergency Support",
+      description: "One-click access to tools during moments of weakness",
+      icon: <Shield className="h-6 w-6 text-red-500" />
     }
   ];
   
@@ -117,64 +152,46 @@ const Index: React.FC = () => {
         </div>
       </section>
       
-      <section className="py-20 px-6 bg-secondary/30">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <motion.h2 
-              className="text-2xl md:text-3xl font-bold mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              Everything You Need For Your Journey
-            </motion.h2>
-            <motion.p 
-              className="text-muted-foreground max-w-3xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              PurePath combines proven techniques with modern technology to help you succeed.
-            </motion.p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="glass-card p-6 rounded-xl"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-              >
-                <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-medium mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-          
+      {/* New Key Features Section */}
+      <section className="py-16 px-6">
+        <div className="max-w-5xl mx-auto">
           <motion.div 
-            className="text-center mt-16"
+            className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            {!currentUser && (
-              <Button size="lg" asChild>
-                <Link to="/register">
-                  Join Our Community
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            )}
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Core Features</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to start your journey to freedom, all in one place
+            </p>
           </motion.div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {keyFeatures.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <Card className="h-full">
+                  <CardContent className="pt-6">
+                    <div className="bg-secondary/30 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                      {feature.icon}
+                    </div>
+                    <h3 className="font-medium text-lg mb-2">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
+       
       
       <section className="py-20 px-6 relative">
         <div className="max-w-4xl mx-auto">

@@ -6,7 +6,8 @@ import {
   Award,
   AlertTriangle,
   Check,
-  X
+  X,
+  Send
 } from 'lucide-react';
 import { useAuth } from '../utils/auth';
 import { acceptFriendRequest, declineFriendRequest, markNotificationAsRead, auth } from '../utils/firebase';
@@ -23,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserProfile } from '../utils/firebase';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -79,6 +81,19 @@ const NotificationsDropdown: React.FC = () => {
       navigate(`/profile?friend=${notification.senderInfo?.id}`);
     }
     refreshUserData();
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (parts.length === 1) {
+      return parts[0][0].toUpperCase();
+    }
+    
+    return '?';
   };
 
   const renderNotificationIcon = (type: string) => {
@@ -142,9 +157,13 @@ const NotificationsDropdown: React.FC = () => {
                 .map((notification, index) => (
                   <React.Fragment key={notification.id || index}>
                     {notification.type === 'friendRequest' && notification.senderInfo ? (
-                      <div className="px-2 py-2 hover:bg-accent flex items-center justify-between">
+                      <div className={`px-2 py-2 hover:bg-accent flex items-center justify-between ${!notification.read ? 'bg-accent/40' : ''}`}>
                         <div className="flex items-center">
-                          {renderNotificationIcon(notification.type)}
+                          {notification.senderInfo && (
+                            <Avatar className="h-8 w-8 mr-2">
+                              <AvatarFallback>{getInitials(notification.senderInfo.name)}</AvatarFallback>
+                            </Avatar>
+                          )}
                           <div>
                             <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>
                               {notification.message}

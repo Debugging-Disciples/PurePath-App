@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,7 +48,7 @@ const Analytics: React.FC = () => {
   const [streakData, setStreakData] = useState<any[]>([]);
   const [moodData, setMoodData] = useState<any[]>([]);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [chartTimeframe, setChartTimeframe] = useState("weekly");
+  const [chartTimeframe, setChartTimeframe] = useState("all"); // Changed from "weekly" to "all"
   const [relapseStats, setRelapseStats] = useState({
     cleanDays: 0,
     relapseDays: 0,
