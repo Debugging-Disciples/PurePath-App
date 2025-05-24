@@ -162,7 +162,7 @@ const Index: React.FC = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Core Features for New Users</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Core Features</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Everything you need to start your journey to freedom, all in one place
             </p>
