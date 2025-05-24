@@ -19,6 +19,7 @@ const Index: React.FC = () => {
     animate: { transition: { staggerChildren: 0.1 } }
   };
   
+  
   const features = [
     {
       title: 'Community Support',
@@ -190,65 +191,7 @@ const Index: React.FC = () => {
           </div>
         </div>
       </section>
-      
-      <section className="py-20 px-6 bg-secondary/30">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <motion.h2 
-              className="text-2xl md:text-3xl font-bold mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              Everything You Need For Your Journey
-            </motion.h2>
-            <motion.p 
-              className="text-muted-foreground max-w-3xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              PurePath combines proven techniques with modern technology to help you succeed.
-            </motion.p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="glass-card p-6 rounded-xl"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
-              >
-                <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-medium mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-          
-          <motion.div 
-            className="text-center mt-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            {!currentUser && (
-              <Button size="lg" asChild>
-                <Link to="/register">
-                  Join Our Community
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-          </motion.div>
-        </div>
-      </section>
+       
       
       <section className="py-20 px-6 relative">
         <div className="max-w-4xl mx-auto">
