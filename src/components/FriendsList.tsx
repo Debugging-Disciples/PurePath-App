@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "../utils/auth";
@@ -28,6 +27,8 @@ import {
   getAllUsernames,
   sendFriendRequest, 
   cancelFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
   removeFriend, 
   setAccountabilityPartner,
   removeAccountabilityPartner,
@@ -265,6 +266,30 @@ const FriendsList: React.FC = () => {
       navigate(`/community?chat=${chatId}`);
     } else {
       toast.error('Failed to create chat');
+    }
+  };
+
+  const handleAcceptFriendRequest = async (userId: string) => {
+    if (!auth.currentUser?.uid) return;
+    
+    const result = await acceptFriendRequest(auth.currentUser.uid, userId);
+    if (result) {
+      toast.success('Friend request accepted');
+      await refreshUserData();
+    } else {
+      toast.error('Failed to accept friend request');
+    }
+  };
+
+  const handleDeclineFriendRequest = async (userId: string) => {
+    if (!auth.currentUser?.uid) return;
+    
+    const result = await declineFriendRequest(auth.currentUser.uid, userId);
+    if (result) {
+      toast.success('Friend request declined');
+      await refreshUserData();
+    } else {
+      toast.error('Failed to decline friend request');
     }
   };
 

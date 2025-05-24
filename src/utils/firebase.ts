@@ -962,37 +962,41 @@ export const cancelFriendRequest = async (senderId: string, recipientId: string)
   }
 };
 
-export const acceptFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
+export const acceptFriendRequest = async (currentUserId: string, requesterId: string) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const friendRef = doc(db, 'users', friendId);
+    const currentUserRef = doc(db, 'users', currentUserId);
+    const requesterRef = doc(db, 'users', requesterId);
     
-    // Get user's name for the notification
-    const userDoc = await getDoc(userRef);
-    const userData = userDoc.data();
-    const userName = `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || 'Someone';
+    // Get both user documents
+    const currentUserDoc = await getDoc(currentUserRef);
+    const requesterDoc = await getDoc(requesterRef);
     
-    // Remove from friend requests and add to friends list
-    await updateDoc(userRef, {
-      'friendRequests.incoming': arrayRemove(friendId),
-      friends: arrayUnion(friendId)
+    if (!currentUserDoc.exists() || !requesterDoc.exists()) {
+      return false;
+    }
+    
+    // Update current user's document
+    await updateDoc(currentUserRef, {
+      friends: arrayUnion(requesterId),
+      'friendRequests.incoming': arrayRemove(requesterId)
     });
     
-    await updateDoc(friendRef, {
-      'friendRequests.outgoing': arrayRemove(userId),
-      friends: arrayUnion(userId),
-      notifications: arrayUnion({
-        id: `fa-${userId}-${Date.now()}`,
-        type: 'friendRequest',
-        message: `${userName} accepted your friend request`,
-        timestamp: Timestamp.now(),
-        read: false,
-        senderInfo: {
-          id: userId,
-          name: userName
-        }
-      })
+    // Update requester's document
+    await updateDoc(requesterRef, {
+      friends: arrayUnion(currentUserId),
+      'friendRequests.outgoing': arrayRemove(currentUserId)
     });
+    
+    // Create a notification for the requester
+    const notificationData = {
+      type: 'friend_request_accepted',
+      fromUserId: currentUserId,
+      message: `${currentUserDoc.data()?.firstName || 'Someone'} accepted your friend request`,
+      read: false,
+      timestamp: serverTimestamp()
+    };
+    
+    await addDoc(collection(db, 'users', requesterId, 'notifications'), notificationData);
     
     return true;
   } catch (error) {
@@ -1001,17 +1005,19 @@ export const acceptFriendRequest = async (userId: string, friendId: string): Pro
   }
 };
 
-export const declineFriendRequest = async (userId: string, friendId: string): Promise<boolean> => {
+export const declineFriendRequest = async (currentUserId: string, requesterId: string) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    const friendRef = doc(db, 'users', friendId);
+    const currentUserRef = doc(db, 'users', currentUserId);
+    const requesterRef = doc(db, 'users', requesterId);
     
-    await updateDoc(userRef, {
-      'friendRequests.incoming': arrayRemove(friendId)
+    // Update current user's document to remove the incoming request
+    await updateDoc(currentUserRef, {
+      'friendRequests.incoming': arrayRemove(requesterId)
     });
     
-    await updateDoc(friendRef, {
-      'friendRequests.outgoing': arrayRemove(userId)
+    // Update requester's document to remove the outgoing request
+    await updateDoc(requesterRef, {
+      'friendRequests.outgoing': arrayRemove(currentUserId)
     });
     
     return true;
