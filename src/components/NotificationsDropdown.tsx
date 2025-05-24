@@ -28,28 +28,47 @@ import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const NotificationsDropdown: React.FC = () => {
-  const { notifications, unreadNotifications, refreshUserData } = useAuth();
+  const { notifications, unreadNotifications, refreshUserData, friends } = useAuth();
   const navigate = useNavigate();
 
   const handleAcceptFriendRequest = async (senderId: string, notificationId: string) => {
-    const result = await acceptFriendRequest(auth.currentUser?.uid || '', senderId);
-    if (result) {
-      toast.success('Friend request accepted');
-      await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
-      refreshUserData();
-    } else {
-      toast.error('Failed to accept friend request');
+    try {
+      // Check if users are already friends
+      if (friends.some(friend => friend.id === senderId)) {
+        toast.error('You are already friends with this user');
+        // Still mark notification as read to remove it
+        await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
+        refreshUserData();
+        return;
+      }
+      
+      const result = await acceptFriendRequest(auth.currentUser?.uid || '', senderId);
+      if (result) {
+        toast.success('Friend request accepted');
+        await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
+        refreshUserData();
+      } else {
+        toast.error('Failed to accept friend request');
+      }
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+      toast.error('An error occurred while processing your request');
     }
   };
 
   const handleDeclineFriendRequest = async (senderId: string, notificationId: string) => {
-    const result = await declineFriendRequest(auth.currentUser?.uid || '', senderId);
-    if (result) {
-      toast.success('Friend request declined');
-      await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
-      refreshUserData();
-    } else {
-      toast.error('Failed to decline friend request');
+    try {
+      const result = await declineFriendRequest(auth.currentUser?.uid || '', senderId);
+      if (result) {
+        toast.success('Friend request declined');
+        await markNotificationAsRead(auth.currentUser?.uid || '', notificationId);
+        refreshUserData();
+      } else {
+        toast.error('Failed to decline friend request');
+      }
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+      toast.error('An error occurred while processing your request');
     }
   };
 
@@ -143,6 +162,7 @@ const NotificationsDropdown: React.FC = () => {
                               variant="outline" 
                               onClick={() => handleAcceptFriendRequest(notification.senderInfo.id, notification.id)}
                               className="h-7 w-7 p-0"
+                              title="Accept friend request"
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -151,6 +171,7 @@ const NotificationsDropdown: React.FC = () => {
                               variant="outline" 
                               onClick={() => handleDeclineFriendRequest(notification.senderInfo.id, notification.id)}
                               className="h-7 w-7 p-0"
+                              title="Decline friend request"
                             >
                               <X className="h-4 w-4" />
                             </Button>
